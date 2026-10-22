@@ -17,9 +17,12 @@ contains
     print '(a)', '      compiler ' // trim(COMPILER) // ', ' // trim(BUILD_TYPE) // ', ' // trim(HOST_SYSTEM)
     print '(a)', '      built    ' // trim(BUILT)
     print '(a)', ''
-    if (len_trim(AUTHOR) > 0) print '(a)', '      Developed by ' // trim(AUTHOR)
-    if (len_trim(DEPARTMENT) > 0) print '(a)', '      ' // trim(DEPARTMENT)
-    if (len_trim(INSTITUTION) > 0) print '(a)', '      ' // trim(INSTITUTION)
+    if (len_trim(AUTHOR) > 0) print '(a)', '      ' // trim(AUTHOR)
+    if (len_trim(DEPARTMENT) > 0 .and. len_trim(INSTITUTION) > 0) then
+      print '(a)', '      ' // trim(DEPARTMENT) // ', ' // trim(INSTITUTION)
+    else if (len_trim(DEPARTMENT) + len_trim(INSTITUTION) > 0) then
+      print '(a)', '      ' // trim(DEPARTMENT) // trim(INSTITUTION)
+    end if
     if (len_trim(CONTACT) > 0) print '(a)', '      ' // trim(CONTACT)
     print '(a)', '      MIT License'
     print '(a)', ''
