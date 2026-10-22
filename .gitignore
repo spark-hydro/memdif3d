@@ -7,3 +7,6 @@ daily_output/
 *.xlsm
 ~$*
 .DS_Store
+__pycache__/
+*.pyc
+*.gif
