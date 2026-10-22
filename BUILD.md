@@ -35,6 +35,13 @@ cmake --preset gfortran_release_windows
 cmake --build build/release
 ```
 
+## Banner text
+The start-up banner shows version, git tag, compiler, build type, OS, build time and developer information. Set the developer lines when configuring (or change the defaults near the top of `CMakeLists.txt`); empty values are left out:
+```
+cmake --preset gfortran_release_linux -D MEMDIF3D_DEPARTMENT="Department of ..." -D MEMDIF3D_CONTACT="name@ttu.edu"
+```
+Other variables: `MEMDIF3D_AUTHOR`, `MEMDIF3D_INSTITUTION`. The build time is the time CMake was configured.
+
 ## Options
 - `-D MEMDIF3D_OPENMP=ON` builds with OpenMP.
 

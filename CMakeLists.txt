@@ -10,11 +10,41 @@ option(MEMDIF3D_OPENMP "Build with OpenMP" OFF)
 set(CMAKE_Fortran_MODULE_DIRECTORY ${CMAKE_BINARY_DIR}/mod)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 
+# ---- banner information (src/version.f90.in) ----
+set(MEMDIF3D_AUTHOR "spark-hydro" CACHE STRING "Developer name shown in the banner")
+set(MEMDIF3D_DEPARTMENT "" CACHE STRING "Department shown in the banner")
+set(MEMDIF3D_INSTITUTION "Texas Tech University" CACHE STRING "Institution shown in the banner")
+set(MEMDIF3D_CONTACT "" CACHE STRING "Contact (e-mail) shown in the banner")
+
+execute_process(COMMAND git describe --tags --always --dirty
+  WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+  OUTPUT_VARIABLE BANNER_GIT_TAG OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET RESULT_VARIABLE git_rc)
+if(NOT git_rc EQUAL 0 OR NOT BANNER_GIT_TAG)
+  set(BANNER_GIT_TAG "unknown")
+endif()
+
+if(CMAKE_Fortran_COMPILER_ID STREQUAL "GNU")
+  set(BANNER_COMPILER "gfortran ${CMAKE_Fortran_COMPILER_VERSION}")
+elseif(CMAKE_Fortran_COMPILER_ID STREQUAL "IntelLLVM")
+  set(BANNER_COMPILER "Intel ifx ${CMAKE_Fortran_COMPILER_VERSION}")
+else()
+  set(BANNER_COMPILER "${CMAKE_Fortran_COMPILER_ID} ${CMAKE_Fortran_COMPILER_VERSION}")
+endif()
+set(BANNER_BUILD_TYPE "${CMAKE_BUILD_TYPE}")
+string(TIMESTAMP BANNER_BUILT "%Y-%m-%d %H:%M:%S UTC" UTC)
+
+# apostrophes would end the Fortran string literal
+foreach(v AUTHOR DEPARTMENT INSTITUTION CONTACT)
+  string(REPLACE "'" "''" BANNER_${v} "${MEMDIF3D_${v}}")
+  string(REPLACE "\"" "\"\"" BANNER_${v} "${BANNER_${v}}")
+endforeach()
+
 configure_file(src/version.f90.in ${CMAKE_BINARY_DIR}/generated/version.f90 @ONLY)
 
 add_executable(memdif3d
   ${CMAKE_BINARY_DIR}/generated/version.f90
   src/kinds_mod.f90
+  src/banner_mod.f90
   src/input_mod.f90
   src/solver_mod.f90
   src/output_mod.f90

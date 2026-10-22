@@ -2,7 +2,8 @@
 ! Model: docs/MODEL_SPEC.md   Input: docs/INPUT_SPEC.md
 program memdif3d
   use kinds_mod, only: dp
-  use version_mod, only: VERSION, BUILD_TYPE
+  use version_mod, only: VERSION
+  use banner_mod, only: print_banner, run_stamp
   use input_mod, only: model_t, read_model, lin, fatal
   use solver_mod, only: advance
   use output_mod, only: expand_name, write_field, write_restart, read_restart, remove_restart, probe_header
@@ -26,7 +27,7 @@ program memdif3d
   call get_command_argument(1, arg)
   select case (trim(arg))
   case ('--version', '-v')
-    print '(a)', 'memdif3d ' // VERSION // ' (' // BUILD_TYPE // ')'
+    call print_banner()
     stop
   case ('--help', '-h')
     call print_usage()
@@ -63,8 +64,10 @@ program memdif3d
   if (ovr_np > 0) m%nperiods = ovr_np
   if (ovr_spp > 0) m%steps_per_period = ovr_spp
 
-  print '(a)', 'memdif3d ' // VERSION // ' (' // BUILD_TYPE // ')'
-  if (len_trim(m%title) > 0) print '(a)', 'case: ' // trim(m%title)
+  call print_banner()
+  print '(a)', ' Run started ' // run_stamp()
+  print '(a)', ' Reading ' // trim(namefile) // ' . . .'
+  if (len_trim(m%title) > 0) print '(a)', ' case: ' // trim(m%title)
   print '(a,3(i0,1x),a,i0,a,i0,a,i0,a)', 'grid: ', m%nx, m%ny, m%nz, ' | fluid ', m%nf, ' ghost ', m%ng, &
     ' source faces ', m%nfaces, ''
   print '(a,es10.3,a,es10.3,a,es10.3)', 'ks/R = ', m%ks, '  km/R = ', m%km, '  velocity = ', m%vel
@@ -131,9 +134,13 @@ program memdif3d
 
     call system_clock(c1)
     tsec = real(c1 - c0, dp) / real(rate, dp)
-    print '(a,i0,a,i0,a,f0.1,a,f10.7,a,f0.1,a)', 'period ', ip, '/', m%nperiods, '  t = ', &
+    print '(a,i0,a,i0,a,f0.1,a,f10.7,a,f7.1,a)', 'period ', ip, '/', m%nperiods, '  t = ', &
       real(gstep, dp) * m%step_len, ' min  CM = ', cm, '   elapsed ', tsec, ' s'
   end do
+
+  print '(a)', ''
+  print '(a)', ' Run finished ' // run_stamp()
+  print '(a,f7.1,a)', ' Normal termination, ', tsec, ' s'
 
 contains
 
