@@ -25,8 +25,14 @@ cmake --build build/ifx_release
 ```
 The Intel runtime is linked statically.
 
+## Python tools
+`conda env create -f environment.yml && conda activate memdif3d` installs numpy, matplotlib and Pillow for `tools/animate_field.py`. The input converter and the prototype solver need only the Python standard library.
+
+## Stability
+The scheme is explicit. At start the program prints the largest coefficient sum and stops if it is above 1 (diffusion too large, retardation too small, velocity or step too big). `--force` runs anyway.
+
 ## Tests
-`ctest` runs the version checks, the input-file check and a full regression (field and probe output against a Python prototype, restart and `--fresh`). It needs Python 3.
+`ctest` runs the version checks, the input-file check, a full regression (field and probe output against a Python prototype, restart and `--fresh`), tests on other geometries (off-centre source, sorption, advection, a sealed box with an analytic end state, the stability guard) and a smoke test of the animation script (skipped without matplotlib). It needs Python 3.
 
 ## Windows (MSYS2 UCRT64 shell)
 ```

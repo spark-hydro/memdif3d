@@ -91,6 +91,15 @@ if(BUILD_TESTING)
       COMMAND ${Python3_EXECUTABLE} -I ${CMAKE_SOURCE_DIR}/tests/test_run.py $<TARGET_FILE:memdif3d>
               ${CMAKE_SOURCE_DIR}/data/reduced_matrix/memdif3d.nam)
     set_tests_properties(run_reduced_matrix PROPERTIES PASS_REGULAR_EXPRESSION "PASS" TIMEOUT 300)
+    # other grids, off-centre source, sorption, advection; sealed box (mass balance, analytic end state); stability guard
+    add_test(NAME other_geometries
+      COMMAND ${Python3_EXECUTABLE} -I ${CMAKE_SOURCE_DIR}/tests/test_cases.py $<TARGET_FILE:memdif3d>)
+    set_tests_properties(other_geometries PROPERTIES PASS_REGULAR_EXPRESSION "PASS" TIMEOUT 300)
+    # animations need numpy, matplotlib and Pillow (see environment.yml); the test skips itself without them
+    add_test(NAME animate_smoke
+      COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tests/test_animate.py $<TARGET_FILE:memdif3d>
+              ${CMAKE_SOURCE_DIR}/data/reduced_matrix/memdif3d.nam)
+    set_tests_properties(animate_smoke PROPERTIES PASS_REGULAR_EXPRESSION "PASS|SKIP" SKIP_REGULAR_EXPRESSION "SKIP" TIMEOUT 300)
   endif()
 endif()
 

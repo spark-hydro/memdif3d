@@ -1,0 +1,15 @@
+# conda create -f environment.yml   (or: conda env create -f environment.yml)
+# Python tools only (input converter, prototype solver, animations). The Fortran program needs a
+# Fortran compiler and CMake: the commented lines install them from conda-forge if you prefer that
+# to the system compilers.
+name: memdif3d
+channels:
+  - conda-forge
+dependencies:
+  - python>=3.10
+  - numpy
+  - matplotlib
+  - pillow
+  # - gfortran
+  # - cmake
+  # - make

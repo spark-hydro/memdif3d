@@ -9,3 +9,5 @@ Axis names: the scripts use `z` = rows, `x` = column within a slice, `y` = slice
 
 4. `xlsx2memdif.py`: reads the spreadsheet and writes the memdif3d text input set (see `../docs/INPUT_SPEC.md`).
 5. `memdif_proto.py`: reads only the text files and runs a step; compares with `ref_step.py` (used by ctest).
+6. `make_test_case.py`: writes small synthetic input sets (`open`, `closed`) for tests/test_cases.py.
+7. `animate_field.py`: animated GIFs of the field files (face and/or side view); needs numpy, matplotlib, Pillow.

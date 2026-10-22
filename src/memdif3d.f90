@@ -5,7 +5,7 @@ program memdif3d
   use version_mod, only: VERSION
   use banner_mod, only: print_banner, run_stamp
   use input_mod, only: model_t, read_model, lin, fatal
-  use solver_mod, only: advance
+  use solver_mod, only: advance, stability
   use output_mod, only: expand_name, write_field, write_restart, read_restart, remove_restart, probe_header
   implicit none
 
@@ -15,7 +15,9 @@ program memdif3d
   real(dp), allocatable :: buf(:, :)
   real(dp) :: cm, cmn, tsec
   integer :: nargs, i, ip, is, cur, ip0, gstep, step0, pu, ios, c0, c1, rate, ovr_np, ovr_spp
-  logical :: fresh, per_period, pok
+  logical :: fresh, per_period, pok, force
+  real(dp) :: smax, ssrc
+  integer :: worst, wx, wy, wz
   character(len=:), allocatable :: pfile
 
   nargs = command_argument_count()
@@ -36,6 +38,7 @@ program memdif3d
 
   namefile = arg
   fresh = .false.
+  force = .false.
   ovr_np = -1
   ovr_spp = -1
   i = 2
@@ -44,6 +47,8 @@ program memdif3d
     select case (trim(arg))
     case ('--fresh')
       fresh = .true.
+    case ('--force')
+      force = .true.
     case ('--nperiods')
       i = i + 1
       call get_command_argument(i, arg)
@@ -72,6 +77,26 @@ program memdif3d
     ' source faces ', m%nfaces, ''
   print '(a,es10.3,a,es10.3,a,es10.3)', 'ks/R = ', m%ks, '  km/R = ', m%km, '  velocity = ', m%vel
   print '(a,i0,a,i0,a)', 'run: ', m%nperiods, ' periods x ', m%steps_per_period, ' steps'
+
+  ! explicit scheme: refuse to run when it would be unstable
+  call stability(m, smax, worst, ssrc)
+  if (worst > 0) then
+    wz = mod(worst - 1, m%nz) + 1
+    wx = mod((worst - 1) / m%nz, m%nx) + 1
+    wy = (worst - 1) / (m%nz * m%nx) + 1
+    print '(a,f6.3,a,3(i0,1x),a)', 'stability: largest coefficient sum = ', smax, ' at cell ', wx, wy, wz, '(limit 1)'
+  end if
+  print '(a,es10.3,a)', 'stability: source cell sum         = ', ssrc, ' (limit 1)'
+  if (m%vel < 0.0_dp .and. any(m%advnb > 0)) &
+    call fatal('VELOCITY must not be negative (upwind term runs towards lower IX only)')
+  if (smax > 1.0_dp .or. ssrc > 1.0_dp) then
+    if (force) then
+      print '(a)', 'warning: the explicit scheme is unstable for these coefficients; running anyway (--force)'
+    else
+      call fatal('explicit scheme unstable: coefficient sum above 1. Lower DIFFUSION, raise POROSITY/KD (retardation), ' &
+                 // 'reduce VELOCITY or the step, or use --force')
+    end if
+  end if
 
   allocate (buf(m%ntot, 2))
   buf(:, 1) = m%c0
@@ -157,9 +182,10 @@ contains
 
   subroutine print_usage()
     print '(a)', 'memdif3d ' // VERSION
-    print '(a)', 'Usage: memdif3d <namefile> [--fresh] [--nperiods N] [--steps-per-period N]'
+    print '(a)', 'Usage: memdif3d <namefile> [--fresh] [--force] [--nperiods N] [--steps-per-period N]'
     print '(a)', '       memdif3d --version | --help'
     print '(a)', '  --fresh              ignore and delete restart files, start from the initial state'
+    print '(a)', '  --force              run even if the stability check fails'
     print '(a)', '  --nperiods N         override NPERIODS of the TDIS package'
     print '(a)', '  --steps-per-period N override STEPS_PER_PERIOD'
   end subroutine print_usage

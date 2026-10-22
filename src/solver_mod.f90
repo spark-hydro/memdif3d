@@ -4,7 +4,7 @@ module solver_mod
   use input_mod, only: model_t
   implicit none
   private
-  public :: advance
+  public :: advance, stability
 
 contains
 
@@ -51,5 +51,33 @@ contains
       end if
     end do
   end subroutine advance
+
+  ! Explicit-scheme limit: for every fluid cell the weights of the new value,
+  !   1 - (sum of neighbour coefficients) - velocity,
+  ! must stay >= 0, and so must 1 - Km * faces / V for the source cell.
+  ! smax is the largest coefficient sum, worst the linear index of that cell, ssrc the source sum.
+  subroutine stability(m, smax, worst, ssrc)
+    type(model_t), intent(in) :: m
+    real(dp), intent(out) :: smax, ssrc
+    integer, intent(out) :: worst
+    integer :: k, d, t
+    real(dp) :: s
+    smax = 0.0_dp
+    worst = 0
+    do k = 1, m%nf
+      s = 0.0_dp
+      do d = 1, 6
+        t = m%nb(d, k)
+        if (t > 0) s = s + m%ks
+        if (t < 0) s = s + m%km
+      end do
+      if (m%advnb(k) > 0) s = s + m%vel
+      if (s > smax) then
+        smax = s
+        worst = m%fcell(k)
+      end if
+    end do
+    ssrc = m%kmem * real(m%nfaces, dp) / m%vol
+  end subroutine stability
 
 end module solver_mod

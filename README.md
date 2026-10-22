@@ -29,10 +29,19 @@ mkdir run1 && cd run1
 ```
 Writes `field_001.csv` ... (one per day), `probes_001.csv` ... (one row per minute) and restart files in the current folder. Run the same command again after an interruption to continue from the last finished day; add `--fresh` to start over.
 
+## Animations
+`tools/animate_field.py` turns the daily field files into an animated GIF, with the face view and the side view each switched on or off:
+```
+python3 tools/animate_field.py run1 --nam data/reduced_matrix/memdif3d.nam --out solute.gif
+python3 tools/animate_field.py run1 --nam data/reduced_matrix/memdif3d.nam --side off        # face view only
+python3 tools/animate_field.py run1 --nam data/reduced_matrix/memdif3d.nam --face off --log  # side view, log colours
+```
+Other options: `--side-plane xz|yz`, `--slice`, `--face-z`, `--vmax`, `--fps`, `--every`. It needs numpy, matplotlib and Pillow: `conda env create -f environment.yml && conda activate memdif3d`. The frames are the field files, one per period; use a smaller `STEPS_PER_PERIOD` (and more periods) in the TDIS file for finer time resolution.
+
 ## Plan
 1. Input in MODFLOW 6 style text packages: done (format, generator, example set, Fortran reader).
 2. Solver, daily output, probes, restart: done.
-3. Compare a long run with the spreadsheet / VBA daily files; more example cases (sorption, advection, other geometries).
+3. Compare a long run with the spreadsheet / VBA daily files. Done: tests on a second geometry (off-centre source, sorption, advection) and a sealed box with an analytic answer.
 4. OpenMP tuning; optional binary output.
 
 Licensed under the MIT License, see [LICENSE](LICENSE).
