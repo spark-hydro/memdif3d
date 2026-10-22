@@ -12,9 +12,9 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 
 # ---- banner information (src/version.f90.in) ----
 set(MEMDIF3D_AUTHOR "spark-hydro" CACHE STRING "Developer name shown in the banner")
-set(MEMDIF3D_DEPARTMENT "" CACHE STRING "Department shown in the banner")
+set(MEMDIF3D_DEPARTMENT "Dept. of Civil, Environmental, and Construction Engineering (CECE)" CACHE STRING "Department shown in the banner")
 set(MEMDIF3D_INSTITUTION "Texas Tech University" CACHE STRING "Institution shown in the banner")
-set(MEMDIF3D_CONTACT "" CACHE STRING "Contact (e-mail) shown in the banner")
+set(MEMDIF3D_CONTACT "seonggyu.park@ttu.edu" CACHE STRING "Contact (e-mail) shown in the banner")
 
 execute_process(COMMAND git describe --tags --always --dirty
   WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
