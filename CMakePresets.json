@@ -1,0 +1,27 @@
+{
+  "version": 3,
+  "cmakeMinimumRequired": { "major": 3, "minor": 22, "patch": 0 },
+  "configurePresets": [
+    { "name": "gfortran_release_linux", "displayName": "gfortran Release (Linux)",
+      "generator": "Unix Makefiles", "binaryDir": "${sourceDir}/build/release",
+      "cacheVariables": { "CMAKE_Fortran_COMPILER": "gfortran", "CMAKE_BUILD_TYPE": "Release" } },
+    { "name": "gfortran_debug_linux", "displayName": "gfortran Debug (Linux)",
+      "generator": "Unix Makefiles", "binaryDir": "${sourceDir}/build/debug",
+      "cacheVariables": { "CMAKE_Fortran_COMPILER": "gfortran", "CMAKE_BUILD_TYPE": "Debug" } },
+    { "name": "gfortran_release_windows", "displayName": "gfortran Release (Windows, MSYS2 UCRT64)",
+      "generator": "MinGW Makefiles", "binaryDir": "${sourceDir}/build/release",
+      "cacheVariables": { "CMAKE_Fortran_COMPILER": "gfortran", "CMAKE_BUILD_TYPE": "Release" } },
+    { "name": "ifx_release", "displayName": "Intel ifx Release (Linux)",
+      "generator": "Unix Makefiles", "binaryDir": "${sourceDir}/build/ifx_release",
+      "cacheVariables": { "CMAKE_Fortran_COMPILER": "ifx", "CMAKE_BUILD_TYPE": "Release" } }
+  ],
+  "buildPresets": [
+    { "name": "gfortran_release_linux", "configurePreset": "gfortran_release_linux" },
+    { "name": "gfortran_debug_linux", "configurePreset": "gfortran_debug_linux" },
+    { "name": "ifx_release", "configurePreset": "ifx_release" }
+  ],
+  "testPresets": [
+    { "name": "gfortran_release_linux", "configurePreset": "gfortran_release_linux", "output": { "outputOnFailure": true } },
+    { "name": "gfortran_debug_linux", "configurePreset": "gfortran_debug_linux", "output": { "outputOnFailure": true } }
+  ]
+}

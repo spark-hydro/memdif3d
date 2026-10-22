@@ -1,0 +1,48 @@
+name: Build MEMDIF3D
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: ${{ matrix.toolchain.compiler }} ${{ matrix.toolchain.version }} ${{ matrix.build_type }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        build_type: [Release, Debug]
+        toolchain:
+          - { compiler: gcc, version: 13 }
+        include:
+          - build_type: Release
+            toolchain: { compiler: intel, version: "2025.2" }
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: fortran-lang/setup-fortran@v1
+        id: setup-fortran
+        with:
+          compiler: ${{ matrix.toolchain.compiler }}
+          version: ${{ matrix.toolchain.version }}
+
+      - name: Configure
+        run: cmake -B build -D CMAKE_Fortran_COMPILER=${{ env.FC }} -D CMAKE_BUILD_TYPE=${{ matrix.build_type }}
+
+      - name: Build
+        run: cmake --build build --parallel 4
+
+      - name: Check binary
+        run: |
+          file build/memdif3d
+          build/memdif3d --version
+
+      - name: Test
+        run: ctest --test-dir build --output-on-failure --no-tests=error

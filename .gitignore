@@ -1,0 +1,9 @@
+build/
+*.o
+*.mod
+*.smod
+*.exe
+daily_output/
+*.xlsm
+~$*
+.DS_Store

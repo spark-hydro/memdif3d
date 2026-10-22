@@ -1,0 +1,5 @@
+module version_mod
+  implicit none
+  character(len=*), parameter :: VERSION = "@PROJECT_VERSION@"
+  character(len=*), parameter :: BUILD_TYPE = "@CMAKE_BUILD_TYPE@"
+end module version_mod

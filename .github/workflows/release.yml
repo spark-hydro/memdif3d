@@ -1,0 +1,65 @@
+name: Release MEMDIF3D
+
+on:
+  push:
+    tags: ["v*"]
+  pull_request:
+    paths: [.github/workflows/release.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: gnu-linux,     os: ubuntu-latest,  compiler: gcc,   version: 13,       generator: "Unix Makefiles", exe: memdif3d }
+          - { name: gnu-windows,   os: windows-latest, compiler: gcc,   version: 13,       generator: "MinGW Makefiles", exe: memdif3d.exe }
+          - { name: intel-linux,   os: ubuntu-latest,  compiler: intel, version: "2025.2", generator: "Unix Makefiles", exe: memdif3d }
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: fortran-lang/setup-fortran@v1
+        with:
+          compiler: ${{ matrix.compiler }}
+          version: ${{ matrix.version }}
+
+      - name: Configure
+        run: cmake -B build -G "${{ matrix.generator }}" -D CMAKE_Fortran_COMPILER=${{ env.FC }} -D CMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --parallel 4
+
+      - name: Test
+        run: ctest --test-dir build --output-on-failure --no-tests=error
+
+      - name: Package
+        working-directory: build
+        run: cmake -E tar cf ../memdif3d-${{ matrix.name }}.zip --format=zip -- ${{ matrix.exe }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: memdif3d-${{ matrix.name }}
+          path: memdif3d-${{ matrix.name }}.zip
+
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.zip
+          generate_release_notes: true
