@@ -8,10 +8,11 @@ Membrane diffusion in 3D: a fully mixed source cell leaks through a membrane int
 | Folder | Content |
 |---|---|
 | `src/` | Fortran source |
-| `docs/` | model specification |
+| `docs/` | model specification (`MODEL_SPEC.md`) and input file formats (`INPUT_SPEC.md`) |
 | `excel/` | `DailyRun.bas`, VBA that runs the spreadsheet model one day at a time (used to produce reference results) |
-| `tools/` | Python scripts that extract the model from the spreadsheet and check the specification |
-| `tests/`, `data/` | regression tests and example inputs (to come) |
+| `tools/` | Python: `xlsx2memdif.py` turns the spreadsheet into input files, `memdif_proto.py` is a prototype solver that reads them, `ref_step.py` and `test_vs_excel.py` check the specification |
+| `data/reduced_matrix/` | input set generated from `Reduced_Matrix.xlsx` (first test case) |
+| `tests/` | regression tests (to come) |
 
 ## Build
 See [BUILD.md](BUILD.md). Quick start on Linux:
@@ -22,7 +23,7 @@ ctest --test-dir build/release --output-on-failure
 ```
 
 ## Plan
-1. Input in MODFLOW 6 style text packages (name file, TDIS, DIS, IC, DSP/MST, SRC, BND, OC).
+1. Input in MODFLOW 6 style text packages (done: format in `docs/INPUT_SPEC.md`, generator and example set; the Fortran reader is next).
 2. Solver reproducing the spreadsheet to rounding error.
 3. Regression test against the spreadsheet results.
 

@@ -1,0 +1,10 @@
+# memdif3d input written by xlsx2memdif.py from Reduced_Matrix.xlsx
+BEGIN options
+  DAILY_FIELD   FILEOUT field_{period}.csv
+  PROBES        FILEOUT probes.csv
+  RESTART       FILEOUT restart.dat
+END options
+
+BEGIN probes
+  SOURCE
+END probes

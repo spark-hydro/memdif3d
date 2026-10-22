@@ -43,7 +43,7 @@ Regions:
 - **Source M**: one value `CM`; the sheet repeats it in 225 cells (one per footprint cell, at Z = -1) and they are always equal.
 - **Solid plate**: cells with `Z <= 2` that are NOT in F. Constant 0, never updated, never read.
 - **Ghost (boundary) cells**: `Y = 0`, `Y = 28`, `X = 1`, `X = 43`, `Z = 24`.
-- **Fluid cells**: everything else (`Y = 1..27`, `X = 2..42`, `Z = 0..23`, not solid). Count 28,109.
+- **Fluid cells**: everything else (`Y = 1..27`, `X = 2..42`, `Z = 0..23`, not solid). Count 23,922. With 4,481 ghost cells and 2,772 solid cells this is the whole 43 x 29 x 25 = 31,175 grid.
 
 ## 4. Update rule (one step, t -> t+1, using old C for fluid cells)
 For each fluid cell, with `u = C(X,Y,Z)`:

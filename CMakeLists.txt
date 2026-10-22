@@ -45,6 +45,14 @@ if(BUILD_TESTING)
   set_tests_properties(version PROPERTIES PASS_REGULAR_EXPRESSION "memdif3d ${PROJECT_VERSION}")
   add_test(NAME no_arguments COMMAND memdif3d)
   set_tests_properties(no_arguments PROPERTIES PASS_REGULAR_EXPRESSION "Usage")
+
+  find_package(Python3 COMPONENTS Interpreter)
+  if(Python3_Interpreter_FOUND)
+    # package files carry the whole model: prototype solver vs. reference step
+    add_test(NAME input_files_reproduce_reference
+      COMMAND ${Python3_EXECUTABLE} -I ${CMAKE_SOURCE_DIR}/tools/memdif_proto.py
+              ${CMAKE_SOURCE_DIR}/data/reduced_matrix/memdif3d.nam)
+  endif()
 endif()
 
 install(TARGETS memdif3d RUNTIME DESTINATION bin)

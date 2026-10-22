@@ -1,5 +1,9 @@
 import json, re
-V=json.load(open('cells.json')); vals={k:float(v) for k,v in V['vals'].items()}
+import os
+if os.path.exists('cells.json'):          # written by expand_formulas.py; only needed for the Excel comparison
+    V=json.load(open('cells.json')); vals={k:float(v) for k,v in V['vals'].items()}
+else:                                      # parameters of Reduced_Matrix.xlsx
+    vals={'GM1':0.015,'GG1':0.125*0.02/0.3,'GV1':0.3,'FZ1':0.0,'GQ1':5625.0}
 def n2c(n):
     s=''
     while n: n,r=divmod(n-1,26); s=chr(65+r)+s
