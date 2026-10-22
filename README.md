@@ -26,4 +26,4 @@ ctest --test-dir build/release --output-on-failure
 2. Solver reproducing the spreadsheet to rounding error.
 3. Regression test against the spreadsheet results.
 
-No licence has been chosen yet.
+Licensed under the MIT License, see [LICENSE](LICENSE).
