@@ -1,4 +1,4 @@
-# MEMDIF3D
+# memdif3d
 
 Membrane diffusion in 3D: a fully mixed source cell leaks through a membrane into a porous medium, solved with an explicit finite-volume scheme on a regular grid (1 mm cells, 1 minute steps). It replaces a spreadsheet model that had to be run in pieces by hand.
 

@@ -1,4 +1,4 @@
-name: Release MEMDIF3D
+name: Release memdif3d
 
 on:
   push:

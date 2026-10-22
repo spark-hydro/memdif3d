@@ -1,4 +1,4 @@
-name: Build MEMDIF3D
+name: Build memdif3d
 
 on:
   push:

@@ -1,4 +1,4 @@
-! MEMDIF3D: membrane diffusion from a fully mixed source cell into a 3D porous medium.
+! memdif3d: membrane diffusion from a fully mixed source cell into a 3D porous medium.
 ! Skeleton: command line handling only. The model itself follows docs/MODEL_SPEC.md.
 program memdif3d
   use version_mod, only: VERSION, BUILD_TYPE
@@ -13,7 +13,7 @@ program memdif3d
   call get_command_argument(1, arg)
   select case (trim(arg))
   case ("--version", "-v")
-    print '(a)', "MEMDIF3D " // VERSION // " (" // BUILD_TYPE // ")"
+    print '(a)', "memdif3d " // VERSION // " (" // BUILD_TYPE // ")"
   case ("--help", "-h")
     call print_usage()
   case default
@@ -24,7 +24,7 @@ program memdif3d
 contains
 
   subroutine print_usage()
-    print '(a)', "MEMDIF3D " // VERSION
+    print '(a)', "memdif3d " // VERSION
     print '(a)', "Usage: memdif3d <namefile>"
     print '(a)', "       memdif3d --version | --help"
   end subroutine print_usage

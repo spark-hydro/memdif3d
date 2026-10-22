@@ -1,4 +1,4 @@
-# Building MEMDIF3D
+# Building memdif3d
 
 Requirements: a Fortran 2008 compiler (gfortran 13 or newer, or Intel ifx), CMake 3.22 or newer, and make. Python 3 is only needed for the reference checks in `tools/`.
 
