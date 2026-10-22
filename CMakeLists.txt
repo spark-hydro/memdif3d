@@ -14,6 +14,10 @@ configure_file(src/version.f90.in ${CMAKE_BINARY_DIR}/generated/version.f90 @ONL
 
 add_executable(memdif3d
   ${CMAKE_BINARY_DIR}/generated/version.f90
+  src/kinds_mod.f90
+  src/input_mod.f90
+  src/solver_mod.f90
+  src/output_mod.f90
   src/memdif3d.f90)
 
 if(CMAKE_Fortran_COMPILER_ID STREQUAL "GNU")
@@ -52,6 +56,11 @@ if(BUILD_TESTING)
     add_test(NAME input_files_reproduce_reference
       COMMAND ${Python3_EXECUTABLE} -I ${CMAKE_SOURCE_DIR}/tools/memdif_proto.py
               ${CMAKE_SOURCE_DIR}/data/reduced_matrix/memdif3d.nam)
+    # full executable: field/probe output vs. prototype, restart, --fresh
+    add_test(NAME run_reduced_matrix
+      COMMAND ${Python3_EXECUTABLE} -I ${CMAKE_SOURCE_DIR}/tests/test_run.py $<TARGET_FILE:memdif3d>
+              ${CMAKE_SOURCE_DIR}/data/reduced_matrix/memdif3d.nam)
+    set_tests_properties(run_reduced_matrix PROPERTIES PASS_REGULAR_EXPRESSION "PASS" TIMEOUT 300)
   endif()
 endif()
 

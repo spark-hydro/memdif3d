@@ -25,6 +25,9 @@ cmake --build build/ifx_release
 ```
 The Intel runtime is linked statically.
 
+## Tests
+`ctest` runs the version checks, the input-file check and a full regression (field and probe output against a Python prototype, restart and `--fresh`). It needs Python 3.
+
 ## Windows (MSYS2 UCRT64 shell)
 ```
 pacman -S mingw-w64-ucrt-x86_64-gcc-fortran mingw-w64-ucrt-x86_64-cmake make

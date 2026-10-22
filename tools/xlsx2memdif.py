@@ -479,14 +479,21 @@ BEGIN neighbor_overrides
 {chr(10).join(ol)}
 END neighbor_overrides
 ''')
-    w('memdif3d.oc', hdr + '''BEGIN options
-  DAILY_FIELD   FILEOUT field_{period}.csv
-  PROBES        FILEOUT probes.csv
+    fx = sorted(x for x, _ in faces)
+    fy = sorted(y for _, y in faces)
+    cx, cy = fx[len(fx) // 2], fy[len(fy) // 2]
+    w('memdif3d.oc', hdr + f'''# {{period}} in a file name is replaced by the period (day) number.
+BEGIN options
+  DAILY_FIELD   FILEOUT field_{{period}}.csv
+  PROBES        FILEOUT probes_{{period}}.csv
   RESTART       FILEOUT restart.dat
 END options
 
+# written every time step: the source cell, then cells at the middle of the source footprint
 BEGIN probes
   SOURCE
+  {cx} {cy} 1
+  {cx} {cy} 6
 END probes
 ''')
     nfix, ncopy = len(fixed), len(ghost_copy)

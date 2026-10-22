@@ -62,7 +62,27 @@ END neighbor_overrides
 `DIR` is one of `+X -X +Y -Y +Z -Z`. **Default neighbours** of a fluid cell: the six face neighbours that are not solid; the `-Z` neighbour of an `IZ = 1` cell under a source face is the source. `FIXED` lines come first in the file so that `COPY` lines can read them. The list `neighbor_overrides` is how the two spreadsheet irregularities (MODEL_SPEC.md section 6) are carried: delete those lines to follow the intended pattern instead.
 
 ## OC (output control)
-`BEGIN options` with `DAILY_FIELD FILEOUT name`, `PROBES FILEOUT name`, `RESTART FILEOUT name`; `BEGIN probes` lists `SOURCE` or `ix iy iz` cells written every time step. `{period}` in a file name is replaced by the period number. (Output is not implemented yet.)
+```
+BEGIN options
+  DAILY_FIELD  FILEOUT field_{period}.csv
+  PROBES       FILEOUT probes_{period}.csv
+  RESTART      FILEOUT restart.dat
+END options
+BEGIN probes        # SOURCE, or "ix iy iz"; written every time step
+  SOURCE
+  22 15 1
+END probes
+```
+All three outputs are optional. File names are relative to the directory the program is started from. `{period}` in a name is replaced by the period (day) number, zero padded to 3 digits.
+- **DAILY_FIELD:** the whole concentration field at the end of each period, as comma-separated text in the sheet's tile layout: a `# IY n` line per slice, then one line per `IX` with the `IZ` values. Ghost and solid cells are included.
+- **PROBES:** one row per time step with columns `step,time,<probe...>` (time in minutes). With `{period}` in the name a new file starts every period; without it, one file is kept and appended to after a restart.
+- **RESTART:** at the end of every period the full state is written, as text so it can move between computers, alternating between `<name>.1` and `<name>.2` so that a crash during writing never destroys the previous one. On start the newest valid file is used and the run continues with the next period (the log says `restart: continuing after period N`); `--fresh` deletes both files and starts from the initial state. A run whose periods are all finished does nothing.
+
+## Command line
+```
+memdif3d <namefile> [--fresh] [--nperiods N] [--steps-per-period N]
+```
+The last two override TDIS (handy for short tests). Use a separate working directory for each run, because outputs go to the current directory.
 
 ## Generating and checking a set
 ```

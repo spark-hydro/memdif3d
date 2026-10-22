@@ -1,32 +1,160 @@
 ! memdif3d: membrane diffusion from a fully mixed source cell into a 3D porous medium.
-! Skeleton: command line handling only. The model itself follows docs/MODEL_SPEC.md.
+! Model: docs/MODEL_SPEC.md   Input: docs/INPUT_SPEC.md
 program memdif3d
+  use kinds_mod, only: dp
   use version_mod, only: VERSION, BUILD_TYPE
+  use input_mod, only: model_t, read_model, lin, fatal
+  use solver_mod, only: advance
+  use output_mod, only: expand_name, write_field, write_restart, read_restart, remove_restart, probe_header
   implicit none
-  character(len=256) :: arg
 
-  if (command_argument_count() == 0) then
+  type(model_t) :: m
+  character(len=512) :: namefile, arg
+  character(len=1024) :: line
+  real(dp), allocatable :: buf(:, :)
+  real(dp) :: cm, cmn, tsec
+  integer :: nargs, i, ip, is, cur, ip0, gstep, step0, pu, ios, c0, c1, rate, ovr_np, ovr_spp
+  logical :: fresh, per_period, pok
+  character(len=:), allocatable :: pfile
+
+  nargs = command_argument_count()
+  if (nargs == 0) then
     call print_usage()
     stop
   end if
 
   call get_command_argument(1, arg)
   select case (trim(arg))
-  case ("--version", "-v")
-    print '(a)', "memdif3d " // VERSION // " (" // BUILD_TYPE // ")"
-  case ("--help", "-h")
+  case ('--version', '-v')
+    print '(a)', 'memdif3d ' // VERSION // ' (' // BUILD_TYPE // ')'
+    stop
+  case ('--help', '-h')
     call print_usage()
-  case default
-    write (*, '(a)') "memdif3d: running a simulation from '" // trim(arg) // "' is not implemented yet."
-    error stop 2
+    stop
   end select
+
+  namefile = arg
+  fresh = .false.
+  ovr_np = -1
+  ovr_spp = -1
+  i = 2
+  do while (i <= nargs)
+    call get_command_argument(i, arg)
+    select case (trim(arg))
+    case ('--fresh')
+      fresh = .true.
+    case ('--nperiods')
+      i = i + 1
+      call get_command_argument(i, arg)
+      read (arg, *, iostat=ios) ovr_np
+      if (ios /= 0) call fatal('--nperiods needs an integer')
+    case ('--steps-per-period')
+      i = i + 1
+      call get_command_argument(i, arg)
+      read (arg, *, iostat=ios) ovr_spp
+      if (ios /= 0) call fatal('--steps-per-period needs an integer')
+    case default
+      call fatal('unknown option ' // trim(arg))
+    end select
+    i = i + 1
+  end do
+
+  call read_model(trim(namefile), m)
+  if (ovr_np > 0) m%nperiods = ovr_np
+  if (ovr_spp > 0) m%steps_per_period = ovr_spp
+
+  print '(a)', 'memdif3d ' // VERSION // ' (' // BUILD_TYPE // ')'
+  if (len_trim(m%title) > 0) print '(a)', 'case: ' // trim(m%title)
+  print '(a,3(i0,1x),a,i0,a,i0,a,i0,a)', 'grid: ', m%nx, m%ny, m%nz, ' | fluid ', m%nf, ' ghost ', m%ng, &
+    ' source faces ', m%nfaces, ''
+  print '(a,es10.3,a,es10.3,a,es10.3)', 'ks/R = ', m%ks, '  km/R = ', m%km, '  velocity = ', m%vel
+  print '(a,i0,a,i0,a)', 'run: ', m%nperiods, ' periods x ', m%steps_per_period, ' steps'
+
+  allocate (buf(m%ntot, 2))
+  buf(:, 1) = m%c0
+  buf(:, 2) = m%c0                     ! solid cells never change, so both buffers can start equal
+  cur = 1
+  cm = m%cm0
+  ip0 = 1
+  step0 = 0
+
+  if (m%has_restart) then
+    if (fresh) then
+      call remove_restart(m%restart_out)
+    else if (read_restart(m, m%restart_out, buf(:, 1), cm, ip, step0)) then
+      buf(:, 2) = buf(:, 1)
+      ip0 = ip + 1
+      print '(a,i0,a,i0,a)', 'restart: continuing after period ', ip, ' (step ', step0, ')'
+    end if
+  end if
+  if (ip0 > m%nperiods) then
+    print '(a)', 'nothing to do: all periods are already finished'
+    stop
+  end if
+
+  per_period = .false.
+  if (m%has_probes .and. m%nprobe > 0) per_period = index(m%probes_out, '{period}') > 0
+  call system_clock(c0, rate)
+
+  do ip = ip0, m%nperiods
+    pok = .false.
+    if (m%has_probes .and. m%nprobe > 0) then
+      pfile = expand_name(m%probes_out, ip)
+      if (per_period .or. ip == ip0 .and. step0 == 0) then
+        open (newunit=pu, file=pfile, status='replace', action='write', iostat=ios)
+        if (ios == 0) then
+          call probe_header(m, line)
+          write (pu, '(a)') trim(line)
+        end if
+      else
+        open (newunit=pu, file=pfile, status='old', position='append', action='write', iostat=ios)
+      end if
+      pok = (ios == 0)
+      if (.not. pok) print '(a)', 'warning: cannot open ' // pfile
+    end if
+
+    do is = 1, m%steps_per_period
+      call advance(m, buf(:, cur), cm, buf(:, 3 - cur), cmn)
+      cm = cmn
+      cur = 3 - cur
+      if (pok) then
+        gstep = (ip - 1) * m%steps_per_period + is
+        write (pu, '(i0,",",f0.3,*(:,",",es23.15e3))') gstep, real(gstep, dp) * m%step_len, &
+          (probe_value(m, buf(:, cur), cm, i), i=1, m%nprobe)
+      end if
+    end do
+    if (pok) close (pu)
+
+    gstep = ip * m%steps_per_period
+    if (m%has_field) call write_field(m, buf(:, cur), cm, ip, gstep, expand_name(m%field_out, ip))
+    if (m%has_restart) call write_restart(m, buf(:, cur), cm, ip, gstep, m%restart_out)
+
+    call system_clock(c1)
+    tsec = real(c1 - c0, dp) / real(rate, dp)
+    print '(a,i0,a,i0,a,f0.1,a,f10.7,a,f0.1,a)', 'period ', ip, '/', m%nperiods, '  t = ', &
+      real(gstep, dp) * m%step_len, ' min  CM = ', cm, '   elapsed ', tsec, ' s'
+  end do
 
 contains
 
+  real(dp) function probe_value(mm, c, csrc, k)
+    type(model_t), intent(in) :: mm
+    real(dp), intent(in) :: c(:), csrc
+    integer, intent(in) :: k
+    if (mm%probe_ijk(1, k) == 0) then
+      probe_value = csrc
+    else
+      probe_value = c(lin(mm, mm%probe_ijk(1, k), mm%probe_ijk(2, k), mm%probe_ijk(3, k)))
+    end if
+  end function probe_value
+
   subroutine print_usage()
-    print '(a)', "memdif3d " // VERSION
-    print '(a)', "Usage: memdif3d <namefile>"
-    print '(a)', "       memdif3d --version | --help"
+    print '(a)', 'memdif3d ' // VERSION
+    print '(a)', 'Usage: memdif3d <namefile> [--fresh] [--nperiods N] [--steps-per-period N]'
+    print '(a)', '       memdif3d --version | --help'
+    print '(a)', '  --fresh              ignore and delete restart files, start from the initial state'
+    print '(a)', '  --nperiods N         override NPERIODS of the TDIS package'
+    print '(a)', '  --steps-per-period N override STEPS_PER_PERIOD'
   end subroutine print_usage
 
 end program memdif3d
