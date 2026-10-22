@@ -68,15 +68,31 @@ with tempfile.TemporaryDirectory() as d1, tempfile.TemporaryDirectory() as r1:
     nper, spp = 3, 15
     ser = []
     cells = [(8, 5, 1), (8, 5, 5)]
-    for _ in range(nper * spp):
+    C20 = None
+    for i in range(nper * spp):
         C, CM = m.step(C, CM)
         ser.append([CM] + [C[p] for p in cells])
+        if i + 1 == 20:
+            C20, CM20 = dict(C), CM
     cmf, vals = field(os.path.join(r1, f'field_{nper:03d}.csv'))
     order = [(x, iy, iz) for iy in range(1, m.ny + 1) for x in range(1, m.nx + 1) for iz in range(1, m.nz + 1)]
     worst = max(abs(a - C[p]) for a, p in zip(vals, order))
     print(f'open: {m.nx}x{m.ny}x{m.nz}, fluid {len(m.fluid)}, field vs prototype {worst:.2e}, CM diff {abs(cmf - CM):.2e}')
     if len(vals) != len(order) or worst > 1e-12 or abs(cmf - CM) > 1e-12:
         fail('open case differs from the prototype')
+    # snapshots every 5 steps inside the periods: 9 files, the last one equals the period-3 field, step 20 matches the prototype
+    with tempfile.TemporaryDirectory() as r1b:
+        run(nam, r1b, '--snapshot-every', '5')
+        snaps = sorted(f for f in os.listdir(r1b) if f.startswith('snap_'))
+        if len(snaps) != 9 or snaps[0] != 'snap_0000005.csv':
+            fail(f'expected 9 snapshot files, got {snaps}')
+        if open(os.path.join(r1b, 'snap_0000045.csv')).read() != open(os.path.join(r1, f'field_{nper:03d}.csv')).read():
+            fail('the snapshot at the last step must equal the period field')
+        cm20, v20 = field(os.path.join(r1b, 'snap_0000020.csv'))
+        sw = max(abs(a - C20[p]) for a, p in zip(v20, order))
+        print(f'open: snapshot at step 20 vs prototype {sw:.2e}')
+        if sw > 1e-12 or abs(cm20 - CM20) > 1e-12:
+            fail('snapshot differs from the prototype')
     pr = probes(os.path.join(r1, f'probes_{nper:03d}.csv'))
     off = (nper - 1) * spp
     pw = max(abs(row[2 + j] - ser[off + i][j]) for i, row in enumerate(pr) for j in range(3))

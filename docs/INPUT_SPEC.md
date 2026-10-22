@@ -67,6 +67,7 @@ BEGIN options
   DAILY_FIELD  FILEOUT field_{period}.csv
   PROBES       FILEOUT probes_{period}.csv
   RESTART      FILEOUT restart.dat
+  SNAPSHOT     FILEOUT snap_{step}.csv  EVERY 60
 END options
 BEGIN probes        # SOURCE, or "ix iy iz"; written every time step
   SOURCE
@@ -75,14 +76,15 @@ END probes
 ```
 All three outputs are optional. File names are relative to the directory the program is started from. `{period}` in a name is replaced by the period (day) number, zero padded to 3 digits.
 - **DAILY_FIELD:** the whole concentration field at the end of each period, as comma-separated text in the sheet's tile layout: a `# IY n` line per slice, then one line per `IX` with the `IZ` values. Ghost and solid cells are included.
+- **SNAPSHOT:** optional. The same field file as DAILY_FIELD, written every `EVERY` time steps inside the run, with `{step}` in the name replaced by the step number (7 digits, so the files sort in time order). Use it for animations with finer frames: `EVERY 60` is one frame per hour for a 1-minute step. Command line: `--snapshot-every N` (default name `snap_{step}.csv`). Disk use is about 0.75 MB per frame for the Reduced_Matrix grid.
 - **PROBES:** one row per time step with columns `step,time,<probe...>` (time in minutes). With `{period}` in the name a new file starts every period; without it, one file is kept and appended to after a restart.
 - **RESTART:** at the end of every period the full state is written, as text so it can move between computers, alternating between `<name>.1` and `<name>.2` so that a crash during writing never destroys the previous one. On start the newest valid file is used and the run continues with the next period (the log says `restart: continuing after period N`); `--fresh` deletes both files and starts from the initial state. A run whose periods are all finished does nothing.
 
 ## Command line
 ```
-memdif3d <namefile> [--fresh] [--nperiods N] [--steps-per-period N]
+memdif3d <namefile> [--fresh] [--force] [--nperiods N] [--steps-per-period N] [--snapshot-every N]
 ```
-The last two override TDIS (handy for short tests). Use a separate working directory for each run, because outputs go to the current directory.
+`--nperiods` and `--steps-per-period` override TDIS (handy for short tests); `--force` runs despite a failed stability check. Use a separate working directory for each run, because outputs go to the current directory.
 
 ## Generating and checking a set
 ```

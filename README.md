@@ -36,7 +36,7 @@ python3 tools/animate_field.py run1 --nam data/reduced_matrix/memdif3d.nam --out
 python3 tools/animate_field.py run1 --nam data/reduced_matrix/memdif3d.nam --side off        # face view only
 python3 tools/animate_field.py run1 --nam data/reduced_matrix/memdif3d.nam --face off --log  # side view, log colours
 ```
-Other options: `--side-plane xz|yz`, `--slice`, `--face-z`, `--vmax`, `--fps`, `--every`. It needs numpy, matplotlib and Pillow: `conda env create -f environment.yml && conda activate memdif3d`. The frames are the field files, one per period; use a smaller `STEPS_PER_PERIOD` (and more periods) in the TDIS file for finer time resolution.
+Other options: `--side-plane xz|yz`, `--slice`, `--face-z`, `--vmax`, `--fps`, `--every`. It needs numpy, matplotlib and Pillow: `conda env create -f environment.yml && conda activate memdif3d`. The frames are the field files. For finer time resolution inside a long run use `--snapshot-every 60` (one field file per hour for a 1-minute step) and `--pattern 'snap_*.csv'`.
 
 ## Plan
 1. Input in MODFLOW 6 style text packages: done (format, generator, example set, Fortran reader).

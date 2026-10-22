@@ -4,7 +4,7 @@ module output_mod
   use input_mod, only: model_t, lin
   implicit none
   private
-  public :: expand_name, write_field, write_restart, read_restart, remove_restart, probe_header
+  public :: expand_name, expand_step, write_field, write_restart, read_restart, remove_restart, probe_header
 
 contains
 
@@ -27,6 +27,26 @@ contains
       r = tmpl(1:i - 1) // trim(ps) // trim(tmpl(i + 8:))
     end if
   end function expand_name
+
+  ! replaces {step} by the global step number (7 digits, zero padded)
+  function expand_step(tmpl, step) result(r)
+    character(len=*), intent(in) :: tmpl
+    integer, intent(in) :: step
+    character(len=:), allocatable :: r
+    character(len=12) :: ss
+    integer :: i
+    if (step <= 9999999) then
+      write (ss, '(i7.7)') step
+    else
+      write (ss, '(i0)') step
+    end if
+    i = index(tmpl, '{step}')
+    if (i == 0) then
+      r = trim(tmpl)
+    else
+      r = tmpl(1:i - 1) // trim(ss) // trim(tmpl(i + 6:))
+    end if
+  end function expand_step
 
   ! one block per slice (IY), one line per row (IX), IZ across: the same tiles as the spreadsheet
   subroutine write_field(m, c, cm, period, step, path)

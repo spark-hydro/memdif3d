@@ -36,8 +36,9 @@ module input_mod
     integer :: nprobe = 0
     integer, allocatable :: probe_ijk(:, :)
     ! output control
-    logical :: has_field = .false., has_probes = .false., has_restart = .false.
-    character(len=256) :: field_out = '', probes_out = '', restart_out = ''
+    logical :: has_field = .false., has_probes = .false., has_restart = .false., has_snap = .false.
+    character(len=256) :: field_out = '', probes_out = '', restart_out = '', snap_out = ''
+    integer :: snap_every = 0
   end type model_t
 
   integer, parameter :: DXYZ(3, 6) = reshape([ 1, 0, 0,  -1, 0, 0,  0, 1, 0,  0, -1, 0,  0, 0, 1,  0, 0, -1], [3, 6])
@@ -513,6 +514,12 @@ contains
           case ('restart')
             m%has_restart = .true.
             m%restart_out = word(t(i)%s, 3)
+          case ('snapshot')
+            m%has_snap = .true.
+            m%snap_out = word(t(i)%s, 3)
+            if (lower(word(t(i)%s, 4)) /= 'every') call fatal('SNAPSHOT needs: SNAPSHOT FILEOUT name EVERY n')
+            m%snap_every = to_int(word(t(i)%s, 5), ios)
+            if (ios /= 0 .or. m%snap_every < 1) call fatal('SNAPSHOT EVERY needs a positive integer')
           end select
         end do
       end if

@@ -6,7 +6,7 @@ program memdif3d
   use banner_mod, only: print_banner, run_stamp
   use input_mod, only: model_t, read_model, lin, fatal
   use solver_mod, only: advance, stability
-  use output_mod, only: expand_name, write_field, write_restart, read_restart, remove_restart, probe_header
+  use output_mod, only: expand_name, expand_step, write_field, write_restart, read_restart, remove_restart, probe_header
   implicit none
 
   type(model_t) :: m
@@ -14,7 +14,7 @@ program memdif3d
   character(len=1024) :: line
   real(dp), allocatable :: buf(:, :)
   real(dp) :: cm, cmn, tsec
-  integer :: nargs, i, ip, is, cur, ip0, gstep, step0, pu, ios, c0, c1, rate, ovr_np, ovr_spp
+  integer :: nargs, i, ip, is, cur, ip0, gstep, step0, pu, ios, c0, c1, rate, ovr_np, ovr_spp, ovr_snap
   logical :: fresh, per_period, pok, force
   real(dp) :: smax, ssrc
   integer :: worst, wx, wy, wz
@@ -41,6 +41,7 @@ program memdif3d
   force = .false.
   ovr_np = -1
   ovr_spp = -1
+  ovr_snap = -1
   i = 2
   do while (i <= nargs)
     call get_command_argument(i, arg)
@@ -54,6 +55,11 @@ program memdif3d
       call get_command_argument(i, arg)
       read (arg, *, iostat=ios) ovr_np
       if (ios /= 0) call fatal('--nperiods needs an integer')
+    case ('--snapshot-every')
+      i = i + 1
+      call get_command_argument(i, arg)
+      read (arg, *, iostat=ios) ovr_snap
+      if (ios /= 0 .or. ovr_snap < 1) call fatal('--snapshot-every needs a positive integer')
     case ('--steps-per-period')
       i = i + 1
       call get_command_argument(i, arg)
@@ -68,6 +74,11 @@ program memdif3d
   call read_model(trim(namefile), m)
   if (ovr_np > 0) m%nperiods = ovr_np
   if (ovr_spp > 0) m%steps_per_period = ovr_spp
+  if (ovr_snap > 0) then
+    m%snap_every = ovr_snap
+    if (.not. m%has_snap) m%snap_out = 'snap_{step}.csv'
+    m%has_snap = .true.
+  end if
 
   call print_banner()
   print '(a)', ' Run started ' // run_stamp()
@@ -145,8 +156,12 @@ program memdif3d
       call advance(m, buf(:, cur), cm, buf(:, 3 - cur), cmn)
       cm = cmn
       cur = 3 - cur
+      gstep = (ip - 1) * m%steps_per_period + is
+      if (m%has_snap) then
+        if (mod(gstep, m%snap_every) == 0) &
+          call write_field(m, buf(:, cur), cm, ip, gstep, expand_step(m%snap_out, gstep))
+      end if
       if (pok) then
-        gstep = (ip - 1) * m%steps_per_period + is
         write (pu, '(i0,",",f0.3,*(:,",",es23.15e3))') gstep, real(gstep, dp) * m%step_len, &
           (probe_value(m, buf(:, cur), cm, i), i=1, m%nprobe)
       end if
@@ -182,10 +197,11 @@ contains
 
   subroutine print_usage()
     print '(a)', 'memdif3d ' // VERSION
-    print '(a)', 'Usage: memdif3d <namefile> [--fresh] [--force] [--nperiods N] [--steps-per-period N]'
+    print '(a)', 'Usage: memdif3d <namefile> [--fresh] [--force] [--nperiods N] [--steps-per-period N] [--snapshot-every N]'
     print '(a)', '       memdif3d --version | --help'
     print '(a)', '  --fresh              ignore and delete restart files, start from the initial state'
     print '(a)', '  --force              run even if the stability check fails'
+    print '(a)', '  --snapshot-every N   also write the field every N steps (snap_{step}.csv)'
     print '(a)', '  --nperiods N         override NPERIODS of the TDIS package'
     print '(a)', '  --steps-per-period N override STEPS_PER_PERIOD'
   end subroutine print_usage
