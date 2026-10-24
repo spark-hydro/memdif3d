@@ -10,6 +10,7 @@ dependencies:
   - numpy
   - matplotlib
   - pillow
+  - plotly
   # - gfortran
   # - cmake
   # - make

@@ -19,6 +19,7 @@ module input_mod
     ! coefficients
     real(dp) :: ks = 0.0_dp, km = 0.0_dp      ! per step, divided by the retardation
     real(dp) :: kmem = 0.0_dp                 ! membrane coefficient used by the source cell
+    real(dp) :: ksand = 0.0_dp                ! sand coefficient (no R) used by the source cell at a hole
     real(dp) :: vol = 0.0_dp, cm0 = 0.0_dp, vel = 0.0_dp
     ! state at the start
     real(dp), allocatable :: c0(:)
@@ -30,8 +31,9 @@ module input_mod
     integer, allocatable :: gcell(:), gsrc(:)
     real(dp), allocatable :: gfac(:)
     ! source faces (linear index of the IZ = 1 cell under each face)
-    integer :: nfaces = 0
-    integer, allocatable :: face(:)
+    ! fkind: 1 membrane, 2 hole (open, sand coefficient); closed faces are not listed
+    integer :: nfaces = 0, nholes = 0, nclosed = 0
+    integer, allocatable :: face(:), fkind(:)
     ! probes: ijk(:, n) = 0 0 0 means the source cell
     integer :: nprobe = 0
     integer, allocatable :: probe_ijk(:, :)
@@ -315,7 +317,7 @@ contains
     character(len=:), allocatable :: w
     real(dp), allocatable :: buf(:), advmask(:)
     integer, allocatable :: idom(:), kmap(:)
-    logical, allocatable :: isface(:, :)
+    integer, allocatable :: isface(:, :)           ! 0 none, 1 membrane, 2 hole, 3 closed
     integer :: nn, nt, i0, i1, i, k, p, d, ix, iy, iz, jx, jy, jz, ios, tx, ty, tz, ip
     real(dp) :: dsand(4), dmem(4), por, rho, kd, rr, ksand, kmem
     logical :: found
@@ -383,6 +385,7 @@ contains
     m%ks = ksand / rr
     m%km = kmem / rr
     m%kmem = kmem
+    m%ksand = ksand
 
     ! SRC
     f = pkg_path(nam, nn, 'src', dir, .true.)
@@ -391,15 +394,32 @@ contains
     m%vol = get_real(t, i0, i1, 'volume', f)
     m%cm0 = get_real(t, i0, i1, 'start_conc', f)
     call need_block(t, nt, 'faces', f, i0, i1)
-    m%nfaces = i1 - i0 + 1
-    allocate (m%face(m%nfaces), isface(m%nx, m%ny))
-    isface = .false.
+    allocate (m%face(i1 - i0 + 1), m%fkind(i1 - i0 + 1), isface(m%nx, m%ny))
+    isface = 0
+    m%nfaces = 0
     do i = i0, i1
       read (t(i)%s, *, iostat=ios) ix, iy
       if (ios /= 0) call fatal('bad face line in ' // trim(f))
       if (ix < 1 .or. ix > m%nx .or. iy < 1 .or. iy > m%ny) call fatal('face outside the grid in ' // trim(f))
-      m%face(i - i0 + 1) = lin(m, ix, iy, 1)
-      isface(ix, iy) = .true.
+      if (isface(ix, iy) /= 0) call fatal('face listed twice in ' // trim(f))
+      w = lower(word(t(i)%s, 3))
+      select case (w)
+      case ('', 'membrane')
+        isface(ix, iy) = 1
+      case ('hole')
+        isface(ix, iy) = 2
+        m%nholes = m%nholes + 1
+      case ('closed')
+        isface(ix, iy) = 3
+        m%nclosed = m%nclosed + 1
+      case default
+        call fatal('face type must be MEMBRANE, HOLE or CLOSED in ' // trim(f))
+      end select
+      if (isface(ix, iy) /= 3) then
+        m%nfaces = m%nfaces + 1
+        m%face(m%nfaces) = lin(m, ix, iy, 1)
+        m%fkind(m%nfaces) = isface(ix, iy)
+      end if
     end do
 
     ! ADV
@@ -425,9 +445,10 @@ contains
           kmap(p) = k
           do d = 1, 6
             m%nb(d, k) = 0
-            if (d == 6 .and. iz == 1 .and. isface(ix, iy)) then
-              m%nb(d, k) = -1
-              cycle
+            if (d == 6 .and. iz == 1 .and. isface(ix, iy) > 0) then
+              if (isface(ix, iy) == 1) m%nb(d, k) = -1
+              if (isface(ix, iy) == 2) m%nb(d, k) = -2
+              cycle                                   ! closed face: no neighbour
             end if
             jx = ix + DXYZ(1, d)
             jy = iy + DXYZ(2, d)

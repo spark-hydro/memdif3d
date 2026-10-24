@@ -86,6 +86,8 @@ program memdif3d
   if (len_trim(m%title) > 0) print '(a)', ' case: ' // trim(m%title)
   print '(a,3(i0,1x),a,i0,a,i0,a,i0,a)', 'grid: ', m%nx, m%ny, m%nz, ' | fluid ', m%nf, ' ghost ', m%ng, &
     ' source faces ', m%nfaces, ''
+  if (m%nholes > 0 .or. m%nclosed > 0) print '(a,i0,a,i0,a,i0)', 'faces: membrane ', m%nfaces - m%nholes, &
+    ' | hole ', m%nholes, ' | closed ', m%nclosed
   print '(a,es10.3,a,es10.3,a,es10.3)', 'ks/R = ', m%ks, '  km/R = ', m%km, '  velocity = ', m%vel
   print '(a,i0,a,i0,a)', 'run: ', m%nperiods, ' periods x ', m%steps_per_period, ' steps'
 

@@ -42,7 +42,11 @@ Blocks `sand` and `membrane`, each with `DIFFUSION`, `TORTUOSITY`, `POROSITY`, `
 `BEGIN options` with `POROSITY`, `BULK_DENSITY`, `KD`: `R = POROSITY + BULK_DENSITY * KD`. The coefficients used in the update are `ks = K_sand / R` and `km = K_membrane / R`. (The source-cell update uses `K_membrane` without `R`, see MODEL_SPEC.md section 4.)
 
 ## SRC (the fully mixed source cell)
-`BEGIN source` with `VOLUME` and `START_CONC`. `BEGIN faces`: one `IX IY` pair per membrane face; each face touches the cell at `IZ = 1` of that column.
+`BEGIN source` with `VOLUME` and `START_CONC`. `BEGIN faces`: one `IX IY [TYPE]` line per face of the source; each face touches the cell at `IZ = 1` of that column. `TYPE` is optional:
+- `MEMBRANE` (default): transfer through the membrane, coefficient `K_membrane`.
+- `HOLE`: no membrane at this face. The source touches the sand directly, with the sand coefficient `K_sand` (the source-cell update uses `K_sand` for it, without `R`, like `K_membrane` for the membrane).
+- `CLOSED`: impermeable face (no transfer, like a wall).
+`tools/make_holes.py` writes a copy of a set with a regular pattern of holes, e.g. `--pitch 3 --size 1` gives `-0--0--0-` along every third row.
 
 ## ADV (advection along X)
 `BEGIN options` with `VELOCITY` (per time step). `BEGIN griddata` with `ADVMASK` (1 = add `VELOCITY * (C(IX+1) - C)` to this cell).

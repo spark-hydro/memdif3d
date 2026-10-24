@@ -14,7 +14,7 @@ contains
     real(dp), intent(inout) :: cout(:)
     real(dp), intent(out) :: cm_out
     integer :: k, d, i, p, t
-    real(dp) :: u, s, acc
+    real(dp) :: u, s, acc, acch
 
     ! fluid cells read only the old state
     !$omp parallel do default(shared) private(k, d, p, t, u, s)
@@ -26,8 +26,10 @@ contains
         t = m%nb(d, k)
         if (t > 0) then
           s = s + m%ks * (cin(t) - u)
-        else if (t < 0) then
+        else if (t == -1) then
           s = s + m%km * (cm_in - u)
+        else if (t == -2) then
+          s = s + m%ks * (cm_in - u)
         end if
       end do
       if (m%advnb(k) > 0) s = s + m%vel * (cin(m%advnb(k)) - u)
@@ -37,10 +39,16 @@ contains
 
     ! source cell
     acc = 0.0_dp
+    acch = 0.0_dp
     do i = 1, m%nfaces
-      acc = acc + (cm_in - cin(m%face(i)))
+      if (m%fkind(i) == 1) then
+        acc = acc + (cm_in - cin(m%face(i)))
+      else
+        acch = acch + (cm_in - cin(m%face(i)))
+      end if
     end do
     cm_out = cm_in - m%kmem / m%vol * acc
+    if (m%nholes > 0) cm_out = cm_out - m%ksand / m%vol * acch
 
     ! ghost cells read new values, in file order
     do i = 1, m%ng
@@ -69,7 +77,8 @@ contains
       do d = 1, 6
         t = m%nb(d, k)
         if (t > 0) s = s + m%ks
-        if (t < 0) s = s + m%km
+        if (t == -1) s = s + m%km
+        if (t == -2) s = s + m%ks
       end do
       if (m%advnb(k) > 0) s = s + m%vel
       if (s > smax) then
@@ -77,7 +86,7 @@ contains
         worst = m%fcell(k)
       end if
     end do
-    ssrc = m%kmem * real(m%nfaces, dp) / m%vol
+    ssrc = (m%kmem * real(m%nfaces - m%nholes, dp) + m%ksand * real(m%nholes, dp)) / m%vol
   end subroutine stability
 
 end module solver_mod

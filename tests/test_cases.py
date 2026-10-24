@@ -7,6 +7,8 @@ open    off-centre 5x3 source, other grid size, mixed ghost rules, sorption, adv
         overrides, 2 min step: Fortran field and probes must match the Python prototype (1e-12).
 closed  sealed box without ghost cells: V*CM + R*sum(c) must stay constant, and the long-time
         concentration must be uniform and equal to the analytic value V*CM0 / (V + R*Nfluid).
+holes   membrane faces tagged HOLE (open, sand coefficient) or CLOSED: Fortran equals the prototype,
+        and a sealed box with holes still conserves mass and reaches the analytic end state.
 unstable  a diffusion coefficient far too large must be refused (and run with --force).
 """
 import os
@@ -121,6 +123,55 @@ with tempfile.TemporaryDirectory() as d2, tempfile.TemporaryDirectory() as r2:
         fail('mass is not conserved in the sealed box')
     if max(spread, abs(cm - ceq)) > 1e-6:
         fail('closed box did not reach the analytic uniform concentration')
+
+def tag_faces(nam, kinds):
+    """Rewrite the .src next to nam: faces listed in kinds get the keyword, in place."""
+    f = os.path.join(os.path.dirname(nam), 't.src')
+    out = []
+    for line in open(f):
+        w = line.split()
+        if len(w) == 2 and w[0].isdigit() and (int(w[0]), int(w[1])) in kinds:
+            line = f'  {w[0]} {w[1]} {kinds[(int(w[0]), int(w[1]))]}\n'
+        out.append(line)
+    open(f, 'w').write(''.join(out))
+
+
+with tempfile.TemporaryDirectory() as d4, tempfile.TemporaryDirectory() as r4:
+    # ---------------- membrane with holes and closed faces against the prototype
+    nam, info = make('open', d4)
+    tag_faces(nam, {(6, 4): 'HOLE', (8, 5): 'HOLE', (10, 6): 'hole', (7, 4): 'CLOSED', (9, 6): 'closed'})
+    run(nam, r4)
+    m = P.Model(nam)
+    if len(m.hset) != 3 or len(m.faces) != 13:
+        fail('prototype did not read the face types')
+    C, CM = dict(m.c0), m.cm0
+    for i in range(45):
+        C, CM = m.step(C, CM)
+    cmf, vals = field(os.path.join(r4, 'field_003.csv'))
+    order = [(x, iy, iz) for iy in range(1, m.ny + 1) for x in range(1, m.nx + 1) for iz in range(1, m.nz + 1)]
+    worst = max(abs(a - C[p]) for a, p in zip(vals, order))
+    print(f'holes: 3 holes, 2 closed faces, field vs prototype {worst:.2e}, CM diff {abs(cmf - CM):.2e}')
+    if worst > 1e-12 or abs(cmf - CM) > 1e-12:
+        fail('hole case differs from the prototype')
+
+with tempfile.TemporaryDirectory() as d5, tempfile.TemporaryDirectory() as r5:
+    # ---------------- sealed box with holes: still conservative, same analytic end state
+    nam, info = make('closed', d5)
+    tag_faces(nam, {(3, 2): 'HOLE', (4, 3): 'HOLE', (5, 4): 'HOLE'})
+    run(nam, r5)
+    m = P.Model(nam)
+    R = info['retardation']
+    mass0 = info['vol'] * info['cm0']
+    fluid = [k for k, p in enumerate((x, iy, iz) for iy in range(1, m.ny + 1) for x in range(1, m.nx + 1)
+                                    for iz in range(1, m.nz + 1)) if m.idom[p] == 1]
+    drift = 0.0
+    for period in range(1, 21):
+        cm, vals = field(os.path.join(r5, f'field_{period:03d}.csv'))
+        drift = max(drift, abs(info['vol'] * cm + R * sum(vals[k] for k in fluid) - mass0) / mass0)
+    ceq = info['vol'] * info['cm0'] / (info['vol'] + R * info['nfluid'])
+    print(f'holes in sealed box: mass drift {drift:.2e}, end state deviation {abs(cm - ceq):.2e}')
+    if drift > 1e-12 or abs(cm - ceq) > 1e-6:
+        fail('sealed box with holes is not conservative')
 
 with tempfile.TemporaryDirectory() as d3, tempfile.TemporaryDirectory() as r3:
     # ---------------- stability guard

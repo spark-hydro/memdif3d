@@ -30,6 +30,12 @@ mkdir run1 && cd run1
 Writes `field_001.csv` ... (one per day), `probes_001.csv` ... (one row per minute) and restart files in the current folder. Run the same command again after an interruption to continue from the last finished day; add `--fresh` to start over.
 
 ## Animations
+`tools/animate_3d.py` makes an interactive 3D animation (one HTML file; drag to rotate while it plays):
+```
+python tools/animate_3d.py run1 --nam data/reduced_matrix/memdif3d.nam --log --out solute3d.html
+```
+Membrane with holes: `python tools/make_holes.py data/reduced_matrix data/holes_p3 --pitch 3 --size 1` writes a new input set (faces tagged `HOLE`, see docs/INPUT_SPEC.md).
+
 `tools/animate_field.py` turns the daily field files into an animated GIF, with the face view and the side view each switched on or off:
 ```
 python3 tools/animate_field.py run1 --nam data/reduced_matrix/memdif3d.nam --out solute.gif

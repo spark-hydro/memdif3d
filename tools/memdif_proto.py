@@ -73,12 +73,13 @@ class Model:
             coef[nm] = D * ph / l / t
         mst = read_blocks(pk['MST'])['options']
         R = scalar(mst, 'POROSITY') + scalar(mst, 'BULK_DENSITY') * scalar(mst, 'KD')
-        self.Km = coef['membrane']
+        self.Km, self.Ks = coef['membrane'], coef['sand']
         self.ks, self.km = coef['sand'] / R, coef['membrane'] / R
         src = read_blocks(pk['SRC'])
         self.V = scalar(src['source'], 'VOLUME')
         self.cm0 = scalar(src['source'], 'START_CONC')
-        self.faces = [(int(w[0]), int(w[1])) for w in src['faces']]
+        self.kind = {(int(w[0]), int(w[1])): (w[2].upper() if len(w) > 2 else 'MEMBRANE') for w in src['faces']}
+        self.faces = [f for f, k in self.kind.items() if k != 'CLOSED']
         self.v = scalar(read_blocks(pk['ADV'])['options'], 'VELOCITY')
         bnd = read_blocks(pk['BND'])
         self.ghosts = []
@@ -97,7 +98,8 @@ class Model:
                 self.over[(p, d)] = 'M'
             else:
                 self.over[(p, d)] = tuple(int(t) for t in w[5:8])
-        self.fset = set(self.faces)
+        self.fset = {f for f, k in self.kind.items() if k == 'MEMBRANE'}
+        self.hset = {f for f, k in self.kind.items() if k == 'HOLE'}
         self.fluid = [p for p, c in self.idom.items() if c == 1]
 
     DIRS = {'+X': (1, 0, 0), '-X': (-1, 0, 0), '+Y': (0, 1, 0), '-Y': (0, -1, 0), '+Z': (0, 0, 1), '-Z': (0, 0, -1)}
@@ -110,8 +112,11 @@ class Model:
                 if self.over[(p, d)] is not None:
                     out[d] = self.over[(p, d)]
                 continue
-            if d == '-Z' and iz == 1 and (x, iy) in self.fset:
-                out[d] = 'M'
+            if d == '-Z' and iz == 1 and (x, iy) in self.kind:
+                if (x, iy) in self.fset:
+                    out[d] = 'M'
+                elif (x, iy) in self.hset:
+                    out[d] = 'H'
                 continue
             t = (x + dx, iy + dy, iz + dz)
             if self.idom.get(t, 0) != 0:
@@ -124,11 +129,13 @@ class Model:
             u = C[p]
             s = u
             for t in self.neighbours(p).values():
-                s += self.km * (CM - u) if t == 'M' else self.ks * (C[t] - u)
+                s += self.km * (CM - u) if t == 'M' else self.ks * ((CM if t == 'H' else C[t]) - u)
             if self.advmask[p]:
                 s += self.v * (C[(p[0] + 1, p[1], p[2])] - u)
             N[p] = s
-        CMn = CM - self.Km / self.V * sum(CM - C[(x, iy, 1)] for (x, iy) in self.faces)
+        CMn = CM - self.Km / self.V * sum(CM - C[(x, iy, 1)] for (x, iy) in self.faces if (x, iy) in self.fset)
+        if self.hset:
+            CMn -= self.Ks / self.V * sum(CM - C[(x, iy, 1)] for (x, iy) in self.hset)
         for p, kind, t, val in self.ghosts:
             N[p] = val * N[t] if kind == 'COPY' else val
         return N, CMn
