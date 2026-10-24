@@ -59,7 +59,7 @@ with tempfile.TemporaryDirectory() as ta, tempfile.TemporaryDirectory() as tb:
         src_series.append(CM)
         cell_series.append([C[p] for p in ijk])
     fort = read_field(os.path.join(ta, f'field_{NP:03d}.csv'))
-    order = [(x, iy, iz) for iy in range(1, m.ny + 1) for x in range(1, m.nx + 1) for iz in range(1, m.nz + 1)]
+    order = [(x, iy, iz) for iz in range(1, m.nz + 1) for x in range(1, m.nx + 1) for iy in range(1, m.ny + 1)]
     if len(fort) != len(order):
         fail(f'field has {len(fort)} values, expected {len(order)}')
     worst = max(abs(f - C[p]) for f, p in zip(fort, order))

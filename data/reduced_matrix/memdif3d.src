@@ -1,5 +1,5 @@
 # memdif3d input written by xlsx2memdif.py from Reduced_Matrix.xlsx
-# One fully mixed source cell. Its faces touch IZ = 1 of the listed (IX, IY) columns.
+# One fully mixed source cell. Its faces touch ILAY = 1 of the listed (IROW, ICOL) cells.
 BEGIN source
   VOLUME 5625.0
   START_CONC 1.0

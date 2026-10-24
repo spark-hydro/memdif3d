@@ -71,7 +71,7 @@ def main():
     ax.set_ylim(0.5, m.nx + 0.5)
     ax.set_aspect('equal')
     ax.set_xlabel('distance from the membrane (mm)  [Z, away from the source]')
-    ax.set_ylabel('IX (rows)')
+    ax.set_ylabel('IROW (rows)')
     ax.set_title(f'Side view, slice IY = {iy} (to scale): {m.nx} x {m.ny} x {m.nz} cells of 1 mm; membrane {lm:g} mm;\n'
                  f'source {len(fx)} x {len(fy)} mm footprint, {depth:g} mm deep (V = {m.V:g} mm3)', fontsize=10, pad=12)
     ax.text(-depth / 2, fx[-1] + 2.2, 'source cell\n(one fully mixed value)', ha='center', va='bottom', fontsize=9)
@@ -110,8 +110,8 @@ def main():
     ap_.set_xlim(0.5, m.ny + 0.5)
     ap_.set_ylim(0.5, m.nx + 0.5)
     ap_.set_aspect('equal')
-    ap_.set_xlabel('IY (slices)')
-    ap_.set_ylabel('IX (rows)')
+    ap_.set_xlabel('ICOL (columns)')
+    ap_.set_ylabel('IROW (rows)')
     nh = sum(1 for k in m.kind.values() if k == 'HOLE')
     ap_.set_title(f'Plan view of the IZ = 1 layer: {len(m.kind)} faces, {nh} holes', fontsize=9)
 

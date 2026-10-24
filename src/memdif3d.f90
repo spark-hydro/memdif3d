@@ -17,7 +17,7 @@ program memdif3d
   integer :: nargs, i, ip, is, cur, ip0, gstep, step0, pu, ios, c0, c1, rate, ovr_np, ovr_spp, ovr_snap
   logical :: fresh, per_period, pok, force
   real(dp) :: smax, ssrc
-  integer :: worst, wx, wy, wz
+  integer :: worst, wl, wr, wc
   character(len=:), allocatable :: pfile
 
   nargs = command_argument_count()
@@ -84,7 +84,7 @@ program memdif3d
   print '(a)', ' Run started ' // run_stamp()
   print '(a)', ' Reading ' // trim(namefile) // ' . . .'
   if (len_trim(m%title) > 0) print '(a)', ' case: ' // trim(m%title)
-  print '(a,3(i0,1x),a,i0,a,i0,a,i0,a)', 'grid: ', m%nx, m%ny, m%nz, ' | fluid ', m%nf, ' ghost ', m%ng, &
+  print '(a,3(i0,1x),a,i0,a,i0,a,i0,a)', 'grid (lay row col): ', m%nlay, m%nrow, m%ncol, ' | fluid ', m%nf, ' ghost ', m%ng, &
     ' source faces ', m%nfaces, ''
   if (m%nholes > 0 .or. m%nclosed > 0) print '(a,i0,a,i0,a,i0)', 'faces: membrane ', m%nfaces - m%nholes, &
     ' | hole ', m%nholes, ' | closed ', m%nclosed
@@ -94,14 +94,14 @@ program memdif3d
   ! explicit scheme: refuse to run when it would be unstable
   call stability(m, smax, worst, ssrc)
   if (worst > 0) then
-    wz = mod(worst - 1, m%nz) + 1
-    wx = mod((worst - 1) / m%nz, m%nx) + 1
-    wy = (worst - 1) / (m%nz * m%nx) + 1
-    print '(a,f6.3,a,3(i0,1x),a)', 'stability: largest coefficient sum = ', smax, ' at cell ', wx, wy, wz, '(limit 1)'
+    wc = mod(worst - 1, m%ncol) + 1
+    wr = mod((worst - 1) / m%ncol, m%nrow) + 1
+    wl = (worst - 1) / (m%ncol * m%nrow) + 1
+    print '(a,f6.3,a,3(i0,1x),a)', 'stability: largest coefficient sum = ', smax, ' at cell (lay row col) ', wl, wr, wc, '(limit 1)'
   end if
   print '(a,es10.3,a)', 'stability: source cell sum         = ', ssrc, ' (limit 1)'
   if (m%vel < 0.0_dp .and. any(m%advnb > 0)) &
-    call fatal('VELOCITY must not be negative (upwind term runs towards lower IX only)')
+    call fatal('VELOCITY must not be negative (upwind term runs towards lower IROW only)')
   if (smax > 1.0_dp .or. ssrc > 1.0_dp) then
     if (force) then
       print '(a)', 'warning: the explicit scheme is unstable for these coefficients; running anyway (--force)'

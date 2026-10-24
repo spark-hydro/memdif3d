@@ -6,8 +6,8 @@ memdif3d reads plain-text packages in the style of MODFLOW 6. The spreadsheet is
 - Run: `memdif3d <namefile>`. All package paths in the name file are relative to the name file.
 - `#` starts a comment. Blank lines are ignored. Keywords are case-insensitive.
 - Blocks: `BEGIN name` ... `END name`.
-- **Indices are 1-based**: `IX` = 1..NX (rows, X), `IY` = 1..NY (slices, Y), `IZ` = 1..NZ (columns, Z). Compared with MODEL_SPEC.md: `IX = X`, `IY = Y + 1`, `IZ = Z + 1`. `IZ = 1` is the cell that touches the membrane.
-- **Arrays** (`IDOMAIN`, `STRT`, `ADVMASK`): the array name, then `INTERNAL`, then NX*NY*NZ numbers in free format, `IZ` fastest, then `IX`, then `IY`. The generator writes one line per `IX` and a comment per `IY`, so every slice looks like a tile of the spreadsheet.
+- **MODFLOW layout, indices are 1-based**: `ILAY` = 1..NLAY (layers, away from the source), `IROW` = 1..NROW (rows), `ICOL` = 1..NCOL (columns). `ILAY = 1` is the layer that touches the membrane. Compared with MODEL_SPEC.md: `IROW = X`, `ICOL = Y + 1`, `ILAY = Z + 1`. A cell id on a line is written in MODFLOW 6 order, `ilay irow icol`; a face is `irow icol`.
+- **Arrays** (`IDOMAIN`, `STRT`, `ADVMASK`): the array name, then `INTERNAL`, then NLAY*NROW*NCOL numbers in free format, `ICOL` fastest, then `IROW`, then `ILAY` (the MODFLOW order). The generator writes one line per `IROW` and a comment per `ILAY`, so every layer is a plan view (rows down, columns across).
 - Units: length mm, time minutes. Coefficients are per time step.
 
 ## Name file `*.nam`
@@ -29,7 +29,7 @@ BEGIN timing    STEP_LENGTH 1.0   STEPS_PER_PERIOD 1440   NPERIODS 28   END timi
 A period is one day. The restart and daily outputs are written at the end of each period.
 
 ## DIS
-`BEGIN dimensions` with `NX`, `NY`, `NZ`; `BEGIN griddata` with `IDOMAIN`:
+`BEGIN dimensions` with `NLAY`, `NROW`, `NCOL`; `BEGIN griddata` with `IDOMAIN`:
 `1` fluid cell (updated by the diffusion rule), `0` solid (never used), `2` ghost cell (set by BND).
 
 ## IC
@@ -42,28 +42,28 @@ Blocks `sand` and `membrane`, each with `DIFFUSION`, `TORTUOSITY`, `POROSITY`, `
 `BEGIN options` with `POROSITY`, `BULK_DENSITY`, `KD`: `R = POROSITY + BULK_DENSITY * KD`. The coefficients used in the update are `ks = K_sand / R` and `km = K_membrane / R`. (The source-cell update uses `K_membrane` without `R`, see MODEL_SPEC.md section 4.)
 
 ## SRC (the fully mixed source cell)
-`BEGIN source` with `VOLUME` and `START_CONC`. `BEGIN faces`: one `IX IY [TYPE]` line per face of the source; each face touches the cell at `IZ = 1` of that column. `TYPE` is optional:
+`BEGIN source` with `VOLUME` and `START_CONC`. `BEGIN faces`: one `IROW ICOL [TYPE]` line per face of the source; each face touches the cell at `ILAY = 1` under it. `TYPE` is optional:
 - `MEMBRANE` (default): transfer through the membrane, coefficient `K_membrane`.
 - `HOLE`: no membrane at this face. The source touches the sand directly, with the sand coefficient `K_sand` (the source-cell update uses `K_sand` for it, without `R`, like `K_membrane` for the membrane).
 - `CLOSED`: impermeable face (no transfer, like a wall).
 `tools/make_holes.py` writes a copy of a set with a regular pattern of holes, e.g. `--pitch 3 --size 1` gives `-0--0--0-` along every third row.
 
 ## ADV (advection along X)
-`BEGIN options` with `VELOCITY` (per time step). `BEGIN griddata` with `ADVMASK` (1 = add `VELOCITY * (C(IX+1) - C)` to this cell).
+`BEGIN options` with `VELOCITY` (per time step). `BEGIN griddata` with `ADVMASK` (1 = add `VELOCITY * (C(IROW+1) - C)` to this cell).
 
 ## BND (ghost cells and exceptions)
 ```
 BEGIN ghosts          # evaluated in file order, after the fluid cells and the source
-  ix iy iz FIXED value
-  ix iy iz COPY sx sy sz factor      # value = factor * new value of cell (sx sy sz)
+  ilay irow icol FIXED value
+  ilay irow icol COPY slay srow scol factor      # value = factor * new value of cell (slay srow scol)
 END ghosts
 BEGIN neighbor_overrides
-  ix iy iz DIR OMIT                  # fluid cell has no neighbour in direction DIR
-  ix iy iz DIR SOURCE                # neighbour is the source cell (coefficient km)
-  ix iy iz DIR SET tx ty tz          # neighbour is cell (tx ty tz) instead of the default
+  ilay irow icol DIR OMIT                  # fluid cell has no neighbour in direction DIR
+  ilay irow icol DIR SOURCE                # neighbour is the source cell (coefficient km)
+  ilay irow icol DIR SET tlay trow tcol    # neighbour is cell (tlay trow tcol) instead of the default
 END neighbor_overrides
 ```
-`DIR` is one of `+X -X +Y -Y +Z -Z`. **Default neighbours** of a fluid cell: the six face neighbours that are not solid; the `-Z` neighbour of an `IZ = 1` cell under a source face is the source. `FIXED` lines come first in the file so that `COPY` lines can read them. The list `neighbor_overrides` is how the two spreadsheet irregularities (MODEL_SPEC.md section 6) are carried: delete those lines to follow the intended pattern instead.
+`DIR` is one of `+ROW -ROW +COL -COL +LAY -LAY`. **Default neighbours** of a fluid cell: the six face neighbours that are not solid; the `-LAY` neighbour of an `ILAY = 1` cell under a source face is the source. `FIXED` lines come first in the file so that `COPY` lines can read them. The list `neighbor_overrides` is how the two spreadsheet irregularities (MODEL_SPEC.md section 6) are carried: delete those lines to follow the intended pattern instead.
 
 ## OC (output control)
 ```
@@ -73,15 +73,15 @@ BEGIN options
   RESTART      FILEOUT restart.dat
   SNAPSHOT     FILEOUT snap_{step}.csv  EVERY 60
 END options
-BEGIN probes        # SOURCE, or "ix iy iz"; written every time step
+BEGIN probes        # SOURCE, or "ilay irow icol"; written every time step
   SOURCE
-  22 15 1
+  1 22 15
 END probes
 ```
 All three outputs are optional. File names are relative to the directory the program is started from. `{period}` in a name is replaced by the period (day) number, zero padded to 3 digits.
-- **DAILY_FIELD:** the whole concentration field at the end of each period, as comma-separated text in the sheet's tile layout: a `# IY n` line per slice, then one line per `IX` with the `IZ` values. Ghost and solid cells are included.
+- **DAILY_FIELD:** the whole concentration field at the end of each period, as comma-separated text: a `# ILAY n` line per layer, then one line per `IROW` with the `ICOL` values. Ghost and solid cells are included.
 - **SNAPSHOT:** optional. The same field file as DAILY_FIELD, written every `EVERY` time steps inside the run, with `{step}` in the name replaced by the step number (7 digits, so the files sort in time order). Use it for animations with finer frames: `EVERY 60` is one frame per hour for a 1-minute step. Command line: `--snapshot-every N` (default name `snap_{step}.csv`). Disk use is about 0.75 MB per frame for the Reduced_Matrix grid.
-- **PROBES:** one row per time step with columns `step,time,<probe...>` (time in minutes). With `{period}` in the name a new file starts every period; without it, one file is kept and appended to after a restart.
+- **PROBES:** one row per time step with columns `step,time,<probe...>` (time in minutes; a cell column is named `ilay_irow_icol`). With `{period}` in the name a new file starts every period; without it, one file is kept and appended to after a restart.
 - **RESTART:** at the end of every period the full state is written, as text so it can move between computers, alternating between `<name>.1` and `<name>.2` so that a crash during writing never destroys the previous one. On start the newest valid file is used and the run continues with the next period (the log says `restart: continuing after period N`); `--fresh` deletes both files and starts from the initial state. A run whose periods are all finished does nothing.
 
 ## Command line

@@ -16,3 +16,4 @@ Axis names: the scripts use `z` = rows, `x` = column within a slice, `y` = slice
 10. `plot_domain.py`: to-scale picture of source, membrane, sand, plate and ghost cells from the input files (side, zoom, plan); needs numpy, matplotlib.
 11. `animate_compare.py`: GIF with two runs side by side (face and side view) plus their difference, e.g. without and with holes; needs numpy, matplotlib, Pillow.
 12. `plot_domain_3d.py`: interactive 3D picture of the domain (source, membrane, plate, sand, ghost cells, and the side/face cut planes); needs plotly.
+13. `convert_layout.py`: converts an input set from the old layout (NX NY NZ, IZ fastest) to the MODFLOW layout (NLAY NROW NCOL, ICOL fastest).

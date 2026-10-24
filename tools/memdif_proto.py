@@ -48,20 +48,28 @@ def array(block, name, conv):
     return vals
 
 
+def cell(w):
+    """cell id of the files (ilay irow icol) -> tuple (x, y, z) = (row, col, lay)"""
+    lay, row, col = (int(t) for t in w)
+    return (row, col, lay)
+
+
 class Model:
     def __init__(self, namefile):
         d = os.path.dirname(namefile)
         pk = {w[0].upper(): os.path.join(d, w[1]) for w in read_blocks(namefile)['packages']}
         dis = read_blocks(pk['DIS'])
-        self.nx, self.ny, self.nz = (scalar(dis['dimensions'], k, int) for k in ('NX', 'NY', 'NZ'))
+        # nlay, nrow, ncol in the files; here x = row, y = col, z = lay (cells are tuples (x, y, z))
+        nlay, self.nx, self.ny = (scalar(dis['dimensions'], k, int) for k in ('NLAY', 'NROW', 'NCOL'))
+        self.nz = nlay
         flat = array(dis['griddata'], 'IDOMAIN', int)
         ic = array(read_blocks(pk['IC'])['griddata'], 'STRT', float)
         am = array(read_blocks(pk['ADV'])['griddata'], 'ADVMASK', int)
         self.idom, self.c0, self.advmask = {}, {}, {}
         k = 0
-        for iy in range(1, self.ny + 1):
+        for iz in range(1, self.nz + 1):                     # file order: col fastest, then row, then layer
             for x in range(1, self.nx + 1):
-                for iz in range(1, self.nz + 1):
+                for iy in range(1, self.ny + 1):
                     p = (x, iy, iz)
                     self.idom[p], self.c0[p], self.advmask[p] = flat[k], ic[k], am[k]
                     k += 1
@@ -84,24 +92,25 @@ class Model:
         bnd = read_blocks(pk['BND'])
         self.ghosts = []
         for w in bnd['ghosts']:
-            p = tuple(int(t) for t in w[:3])
+            p = cell(w[:3])
             if w[3].upper() == 'COPY':
-                self.ghosts.append((p, 'COPY', tuple(int(t) for t in w[4:7]), float(w[7])))
+                self.ghosts.append((p, 'COPY', cell(w[4:7]), float(w[7])))
             else:
                 self.ghosts.append((p, 'FIXED', None, float(w[4])))
         self.over = {}
         for w in bnd['neighbor_overrides']:
-            p, d = tuple(int(t) for t in w[:3]), w[3]
+            p, d = cell(w[:3]), self.DIRS_FILE[w[3].upper()]
             if w[4].upper() == 'OMIT':
                 self.over[(p, d)] = None
             elif w[4].upper() == 'SOURCE':
                 self.over[(p, d)] = 'M'
             else:
-                self.over[(p, d)] = tuple(int(t) for t in w[5:8])
+                self.over[(p, d)] = cell(w[5:8])
         self.fset = {f for f, k in self.kind.items() if k == 'MEMBRANE'}
         self.hset = {f for f, k in self.kind.items() if k == 'HOLE'}
         self.fluid = [p for p, c in self.idom.items() if c == 1]
 
+    DIRS_FILE = {'+ROW': '+X', '-ROW': '-X', '+COL': '+Y', '-COL': '-Y', '+LAY': '+Z', '-LAY': '-Z'}
     DIRS = {'+X': (1, 0, 0), '-X': (-1, 0, 0), '+Y': (0, 1, 0), '-Y': (0, -1, 0), '+Z': (0, 0, 1), '-Z': (0, 0, -1)}
 
     def neighbours(self, p):

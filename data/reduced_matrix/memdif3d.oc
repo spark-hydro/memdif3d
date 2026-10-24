@@ -9,6 +9,6 @@ END options
 # written every time step: the source cell, then cells at the middle of the source footprint
 BEGIN probes
   SOURCE
-  22 15 1
-  22 15 6
+  1 22 15
+  6 22 15
 END probes

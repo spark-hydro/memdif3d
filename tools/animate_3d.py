@@ -7,7 +7,7 @@
 Open the HTML in any browser (no server, no internet). Drag to rotate, scroll to zoom, right-drag to
 pan; the Play button and the slider run the time series and the view stays where you put it.
 
-Axes (mm): x = distance from the membrane (IZ), y = IX (rows), z = IY (slices). The source cell is the
+Axes (mm): x = distance from the membrane (IZ), y = IX (rows), z = ICOL (columns). The source cell is the
 slab at x < 0 coloured by its concentration. Little squares at the membrane plane mark the faces:
 grey = membrane, red = hole, black = closed. Solid and ghost cells are not drawn.
 Frames are the field_*.csv files (one per period); the initial state is added as the first frame.
@@ -138,8 +138,8 @@ def main():
         title=f"memdif3d: {m.nx} x {m.ny} x {m.nz} cells, {len(m.faces)} source faces"
               + (f", {len(m.hset)} holes" if m.hset else ''),
         coloraxis=dict(colorscale=a.cmap, cmin=lo, cmax=hi, colorbar=cbar),
-        scene=dict(xaxis=dict(title='distance from membrane, IZ (mm)', range=[-1.5, zs[-1] + 1.5]),
-                   yaxis=dict(title='IX (mm)'), zaxis=dict(title='IY (mm)'),
+        scene=dict(xaxis=dict(title='distance from membrane, ILAY (mm)', range=[-1.5, zs[-1] + 1.5]),
+                   yaxis=dict(title='IROW (mm)'), zaxis=dict(title='ICOL (mm)'),
                    aspectmode='data', camera=dict(eye=dict(x=1.7, y=-1.7, z=1.0))),
         updatemenus=[dict(type='buttons', direction='left', x=0.02, y=0.0, xanchor='left', yanchor='top', pad=dict(t=60),
                           buttons=[play, pause])],

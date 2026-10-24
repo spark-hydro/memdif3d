@@ -6,7 +6,7 @@
 Boxes (to scale, mm): source cell, membrane faces (red; holes open, closed faces black), solid plate (grey),
 sand cells (tan), ghost boundary cells (blue). Two translucent planes mark the cuts used by the 2D views:
 the side view (XZ at one IY) and the face view (XY at IZ = 1). Drag to rotate, scroll to zoom.
-Axes: x = Z (distance from the membrane, IZ), y = IX (rows), z = IY (slices).
+Axes: x = Z (distance from the membrane, IZ), y = IX (rows), z = ICOL (columns).
 
 Needs: plotly
 """
@@ -89,9 +89,9 @@ def main():
 
     fig = go.Figure(tr)
     fig.update_layout(
-        title=f'memdif3d domain: {m.nx} x {m.ny} x {m.nz} cells of 1 mm (IX x IY x IZ), membrane {lm:g} mm',
-        scene=dict(xaxis=dict(title='Z = IZ, away from the source (mm)'), yaxis=dict(title='X = IX (rows)'),
-                   zaxis=dict(title='Y = IY (slices)'), aspectmode='data', camera=dict(eye=dict(x=1.6, y=-1.9, z=1.1))),
+        title=f'memdif3d domain: {m.nx} x {m.ny} x {m.nz} cells of 1 mm (IROW x ICOL x ILAY), membrane {lm:g} mm',
+        scene=dict(xaxis=dict(title='ILAY (Z), away from the source (mm)'), yaxis=dict(title='IROW (X)'),
+                   zaxis=dict(title='Y = ICOL (columns)'), aspectmode='data', camera=dict(eye=dict(x=1.6, y=-1.9, z=1.1))),
         legend=dict(x=0.01, y=0.99), margin=dict(l=0, r=0, t=50, b=0), height=720)
     fig.write_html(a.out, include_plotlyjs=True, full_html=True)
     print(f'wrote {a.out}')

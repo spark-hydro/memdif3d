@@ -43,20 +43,21 @@ def on_off(s):
 
 
 def read_field(path):
-    """-> (array[NY, NX, NZ], dict(period, step, minutes, cm))"""
+    """-> (array[IY, IX, IZ] = [col, row, lay], dict(period, step, minutes, cm))"""
     rows, info, cur = [], {}, None
     for line in open(path):
         if line.startswith('#'):
             if line.startswith('# memdif3d field'):
                 m = re.search(r'period (\d+), step (\d+), minutes ([\d.]+), CM\s+(\S+)', line)
                 info = dict(period=int(m.group(1)), step=int(m.group(2)), minutes=float(m.group(3)), cm=float(m.group(4)))
-            elif line.startswith('# IY'):
+            elif line.startswith('# ILAY'):
                 cur = []
                 rows.append(cur)
             continue
         if line.strip():
             cur.append([float(t) for t in line.split(',')])
-    return np.array(rows), info
+    # file blocks are [ILAY, IROW, ICOL]; the tools index the array as [IY, IX, IZ] = [col, row, lay]
+    return np.array(rows).transpose(2, 1, 0), info
 
 
 def main():
@@ -163,8 +164,8 @@ def main():
         ai += 1
         ims['face'] = ax.imshow(face_img(arr0, hidden), origin='lower', cmap=cmap, norm=norm, aspect='equal',
                                 extent=(0.5, nx + 0.5, 0.5, ny + 0.5), interpolation='nearest')
-        ax.set_xlabel('X (row, IX)')
-        ax.set_ylabel('Y (slice, IY)')
+        ax.set_xlabel('IROW (row)')
+        ax.set_ylabel('ICOL (column)')
         ax.set_title(f'face view  (XY, IZ = {a.face_z})', fontsize=10)
         if box:
             ax.add_patch(Rectangle((box[0] - 0.5, box[2] - 0.5), box[1] - box[0] + 1, box[3] - box[2] + 1,
@@ -172,13 +173,13 @@ def main():
     if a.side:
         ax = axes[ai]
         if a.side_plane == 'xz':
-            k, nrow, ylab, what = (a.slice or cy), nx, 'X (row, IX)', f'IY = {a.slice or cy}'
+            k, nrow, ylab, what = (a.slice or cy), nx, 'IROW (row)', f'IY = {a.slice or cy}'
         else:
-            k, nrow, ylab, what = (a.slice or cx), ny, 'Y (slice, IY)', f'IX = {a.slice or cx}'
+            k, nrow, ylab, what = (a.slice or cx), ny, 'ICOL (column)', f'IX = {a.slice or cx}'
         ims['side'] = ax.imshow(side_img(arr0, hidden, info0['cm']), origin='lower', cmap=cmap, norm=norm, aspect='equal',
                                 extent=(-0.5, nz + 0.5, 0.5, nrow + 0.5), interpolation='nearest')
         ax.axvline(0.5, color='white', lw=0.8)
-        ax.set_xlabel('Z (away from the source; 0 = source cell)')
+        ax.set_xlabel('ILAY (Z; 0 = source cell)')
         ax.set_ylabel(ylab)
         ax.set_title(f'side view  ({a.side_plane.upper()}, {what})', fontsize=10)
     cb = fig.colorbar(next(iter(ims.values())), ax=list(axes), shrink=0.85)

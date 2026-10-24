@@ -48,13 +48,13 @@ contains
     end if
   end function expand_step
 
-  ! one block per slice (IY), one line per row (IX), IZ across: the same tiles as the spreadsheet
+  ! one block per layer (ILAY), one line per row (IROW), ICOL across (MODFLOW order)
   subroutine write_field(m, c, cm, period, step, path)
     type(model_t), intent(in) :: m
     real(dp), intent(in) :: c(:), cm
     integer, intent(in) :: period, step
     character(len=*), intent(in) :: path
-    integer :: u, ios, ix, iy, iz
+    integer :: u, ios, ir, ic, il
     open (newunit=u, file=path, status='replace', action='write', iostat=ios)
     if (ios /= 0) then
       write (*, '(a)') 'memdif3d: warning: cannot write ' // trim(path)
@@ -62,10 +62,10 @@ contains
     end if
     write (u, '(a,i0,a,i0,a,f0.3,a,es23.15e3)') '# memdif3d field, period ', period, ', step ', step, &
       ', minutes ', real(step, dp) * m%step_len, ', CM ', cm
-    do iy = 1, m%ny
-      write (u, '(a,i0)') '# IY ', iy
-      do ix = 1, m%nx
-        write (u, '(*(es23.15e3,:,","))') (c(lin(m, ix, iy, iz)), iz=1, m%nz)
+    do il = 1, m%nlay
+      write (u, '(a,i0)') '# ILAY ', il
+      do ir = 1, m%nrow
+        write (u, '(*(es23.15e3,:,","))') (c(lin(m, ir, ic, il)), ic=1, m%ncol)
       end do
     end do
     close (u)
@@ -81,7 +81,7 @@ contains
       if (m%probe_ijk(1, i) == 0) then
         lab = 'SOURCE'
       else
-        write (lab, '(i0,a,i0,a,i0)') m%probe_ijk(1, i), '_', m%probe_ijk(2, i), '_', m%probe_ijk(3, i)
+        write (lab, '(i0,a,i0,a,i0)') m%probe_ijk(3, i), '_', m%probe_ijk(1, i), '_', m%probe_ijk(2, i)
       end if
       line = trim(line) // ',' // trim(lab)
     end do
@@ -101,8 +101,8 @@ contains
       write (*, '(a)') 'memdif3d: warning: cannot write ' // path
       return
     end if
-    write (u, '(a)') 'MEMDIF3D-RESTART 1'
-    write (u, '(3(i0,1x))') m%nx, m%ny, m%nz
+    write (u, '(a)') 'MEMDIF3D-RESTART 2'
+    write (u, '(3(i0,1x))') m%nlay, m%nrow, m%ncol
     write (u, '(2(i0,1x))') period, step
     write (u, '(es26.17e3)') cm
     write (u, '(4es26.17e3)') c
@@ -116,14 +116,14 @@ contains
     real(dp), intent(out) :: c(:), cm
     integer, intent(out) :: period, step
     character(len=64) :: line
-    integer :: u, ios, nx, ny, nz
+    integer :: u, ios, nlay, nrow, ncol
     try_read = .false.
     open (newunit=u, file=path, status='old', action='read', iostat=ios)
     if (ios /= 0) return
     read (u, '(a)', iostat=ios) line
-    if (ios /= 0 .or. line(1:16) /= 'MEMDIF3D-RESTART') goto 90
-    read (u, *, iostat=ios) nx, ny, nz
-    if (ios /= 0 .or. nx /= m%nx .or. ny /= m%ny .or. nz /= m%nz) goto 90
+    if (ios /= 0 .or. trim(line) /= 'MEMDIF3D-RESTART 2') goto 90
+    read (u, *, iostat=ios) nlay, nrow, ncol
+    if (ios /= 0 .or. nlay /= m%nlay .or. nrow /= m%nrow .or. ncol /= m%ncol) goto 90
     read (u, *, iostat=ios) period, step
     if (ios /= 0) goto 90
     read (u, *, iostat=ios) cm
