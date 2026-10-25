@@ -17,3 +17,4 @@ Axis names: the scripts use `z` = rows, `x` = column within a slice, `y` = slice
 11. `animate_compare.py`: GIF with two runs side by side (face and side view) plus their difference, e.g. without and with holes; needs numpy, matplotlib, Pillow.
 12. `plot_domain_3d.py`: interactive 3D picture of the domain (source, membrane, plate, sand, ghost cells, and the side/face cut planes); needs plotly.
 13. `convert_layout.py`: renames an input set from NX NY NZ (`# IY` tiles, cell ids x y z) to the MODFLOW names (NLAY NROW NCOL, `# ILAY` tiles, cell ids `ilay irow icol`).
+14. `make_intended_set.py`: copies the Reduced_Matrix set and removes the two spreadsheet irregularities (861 overrides, 82 fixed boundary cells).

@@ -1,0 +1,10 @@
+# memdif3d input written by xlsx2memdif.py from Reduced_Matrix.xlsx
+BEGIN options
+  TIME_UNITS minutes
+END options
+
+BEGIN timing
+  STEP_LENGTH 1.0
+  STEPS_PER_PERIOD 1440
+  NPERIODS 28
+END timing

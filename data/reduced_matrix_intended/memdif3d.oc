@@ -1,0 +1,14 @@
+# memdif3d input written by xlsx2memdif.py from Reduced_Matrix.xlsx
+# {period} in a file name is replaced by the period (day) number.
+BEGIN options
+  DAILY_FIELD   FILEOUT field_{period}.csv
+  PROBES        FILEOUT probes_{period}.csv
+  RESTART       FILEOUT restart.dat
+END options
+
+# written every time step: the source cell, then cells at the middle of the source footprint
+BEGIN probes
+  SOURCE
+  15 22 1
+  15 22 6
+END probes

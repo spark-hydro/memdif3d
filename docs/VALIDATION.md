@@ -30,6 +30,9 @@ python3 tools/compare_excel_block.py 3d_nonzeroboundry.xlsx field_001.csv --firs
 
 Reproduce with `memdif3d data/reduced_matrix/memdif3d.nam --nperiods 1 --steps-per-period 1030 --fresh` and `python3 tools/compare_excel_block.py Day_001.xlsx field_001.csv --first-row 6 --nam data/reduced_matrix/memdif3d.nam`. The state block of `Reduced_Matrix.xlsm` (kept next to the other Excel files, last saved 2026-10-22) is itself a macro result: it equals memdif3d after **32,820 steps** (22.8 days) from the initial state, max abs difference 6.9e-17 over all cells (ghosts 8.7e-18, source 0.139704403392094 in both). The macro overwrites that block in place on every run, so a clean run must start from `Reduced_Matrix.xlsx`, not from this file. Reproduce with `--steps-per-period 32820` and `compare_excel_block.py Reduced_Matrix.xlsm field_001.csv --first-row 6 ...`.
 
+## 3b. The two spreadsheet irregularities
+`data/reduced_matrix_intended` removes them (docs/DEVELOPMENT.md). Against the sheet-exact set: after 576 steps the source is 0.939863 against 0.939861 and the largest cell difference is 9e-3 (peak 0.75), in slice 27 near the membrane; after 28 days the source is 0.0914 against 0.0899 and the largest difference is 3e-3 (peak 0.076), at the far boundary cells that were fixed at 0. The intended set is checked against the prototype and restart by the ctest `run_reduced_matrix_intended`; it cannot be checked against Excel because the sheet contains the irregularities.
+
 ## 4. Independent physics checks (tests/test_cases.py)
 Sealed box: mass conserved to 5e-15 and the end state equals the analytic uniform concentration V*CM0 / (V + R*Nfluid). Off-centre source with sorption, advection and neighbour overrides: Fortran equals the Python prototype to 1e-16.
 

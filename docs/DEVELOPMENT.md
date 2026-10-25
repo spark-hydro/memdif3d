@@ -15,7 +15,7 @@ memdif3d simulates diffusion from a fully mixed source cell through a membrane i
 ## Conventions
 - MODFLOW names: NLAY x NROW x NCOL = 29 x 43 x 25, arrays ICOL fastest then IROW then ILAY, cell ids `ilay irow icol` (docs/INPUT_SPEC.md). Mapping to the lab's axes in docs/MODEL_SPEC.md: ILAY = Y + 1 (slices), IROW = X, ICOL = Z + 1 (away from the source; ICOL = 1 touches the membrane). The array order is the old one, only the names changed. The Python tools keep tuples (x, y, z) = (row, lay, col). Old sets (NX NY NZ, `# IY` tiles) convert with `tools/convert_layout.py`; old restart files are refused.
 - Run each simulation in its own folder: outputs go to the current directory.
-- The two irregularities of the spreadsheet (slice Y = 27 off-by-one, constant-0 edge cells in slices 20 and 26) are kept on purpose, as 861 `neighbor_overrides` and 82 `FIXED` ghost cells in `data/reduced_matrix/memdif3d.bnd`. Delete those lines for the intended pattern.
+- The two irregularities of the spreadsheet (slice Y = 27 off-by-one, constant-0 edge cells in slices 20 and 26) are kept on purpose in `data/reduced_matrix` (861 `neighbor_overrides`, 82 `FIXED` boundary cells in its `.bnd`), because that set reproduces Excel to 2e-16. `data/reduced_matrix_intended` is the same case without them (`tools/make_intended_set.py`); after 28 days the source concentration is 0.0914 instead of 0.0899. Use the intended set for new work unless you compare with the spreadsheet.
 
 ## Validation status
 - Spreadsheet formulas == memdif3d rule on random fields (2e-16).

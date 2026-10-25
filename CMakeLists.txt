@@ -91,6 +91,11 @@ if(BUILD_TESTING)
       COMMAND ${Python3_EXECUTABLE} -I ${CMAKE_SOURCE_DIR}/tests/test_run.py $<TARGET_FILE:memdif3d>
               ${CMAKE_SOURCE_DIR}/data/reduced_matrix/memdif3d.nam)
     set_tests_properties(run_reduced_matrix PROPERTIES PASS_REGULAR_EXPRESSION "PASS" TIMEOUT 300)
+    # the same set without the two spreadsheet irregularities (Fortran vs prototype, restart)
+    add_test(NAME run_reduced_matrix_intended
+      COMMAND ${Python3_EXECUTABLE} -I ${CMAKE_SOURCE_DIR}/tests/test_run.py $<TARGET_FILE:memdif3d>
+              ${CMAKE_SOURCE_DIR}/data/reduced_matrix_intended/memdif3d.nam)
+    set_tests_properties(run_reduced_matrix_intended PROPERTIES PASS_REGULAR_EXPRESSION "PASS" TIMEOUT 300)
     # other grids, off-centre source, sorption, advection; sealed box (mass balance, analytic end state); stability guard
     add_test(NAME other_geometries
       COMMAND ${Python3_EXECUTABLE} -I ${CMAKE_SOURCE_DIR}/tests/test_cases.py $<TARGET_FILE:memdif3d>)
