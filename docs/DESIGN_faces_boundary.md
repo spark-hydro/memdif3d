@@ -1,6 +1,6 @@
-# Design: faces as an array, boundary as rules (not implemented yet)
+# Design: faces as an array, boundary as rules (implemented; the format is described in INPUT_SPEC.md)
 
-Goal: a new model (other geometry) should need a map of the membrane and about five boundary lines, not 225 face lines and 4,481 boundary-cell lines. Nothing here is coded yet; this file is for review. When it is implemented it moves into INPUT_SPEC.md.
+Goal: a new model (other geometry) should need a map of the membrane and about five boundary lines, not 225 face lines and 4,481 boundary-cell lines. This is the design that was reviewed and implemented; INPUT_SPEC.md is the reference for the formats.
 
 Names: the outer cells of the box are **boundary cells** (`IDOMAIN = 2`, formerly "ghost cells"). Indices are 1-based, MODFLOW names, as in INPUT_SPEC.md (`ILAY` = slices Y, `IROW` = rows X, `ICOL` = away from the source, `ICOL = 1` touches the membrane).
 
@@ -57,12 +57,12 @@ BEGIN neighbor_overrides       # unchanged
   ...
 END neighbor_overrides
 ```
-These carry the spreadsheet's two irregularities in `data/reduced_matrix`: the 82 fixed zeros as `boundary_cells`, the 861 shifted neighbours as `neighbor_overrides`. `data/reduced_matrix_intended` has the five rules and no exceptions. A set with only a `boundary_cells` list and no `boundary` block still works (the old explicit list, renamed from `ghosts`).
+These carry the spreadsheet's two irregularities in `data/reduced_matrix`: the 82 fixed zeros and the 2 corner cells next to them as `boundary_cells`, the 861 shifted neighbours as `neighbor_overrides`. `data/reduced_matrix_intended` has the five rules and no exceptions. A set with only a `boundary_cells` list and no `boundary` block still works (the old explicit list, renamed from `ghosts`).
 
 ## 3. Checks that must pass before merging
 1. The five rules, expanded by the program, give the same boundary cells and factors as today's explicit list for both Reduced_Matrix sets (compared as sets, plus identical results).
 2. A 28-day run of each converted set equals the current results exactly (max abs difference 0.0, probes identical); the 576-step comparison with `3d_nonzeroboundry.xlsx` and the `Day_001.xlsx` comparison stay at 1e-16.
-3. All ctests, including the holes tests and the sealed box, with the sets converted; new tests: a wrong face value, a face over a non-fluid cell and a missing side line are refused with a clear message.
+3. All ctests, including the holes tests and the sealed box, with the sets converted; new tests: a wrong face value, a face over a non-fluid cell and a side index that is neither first nor last are refused with a clear message. (A side without a rule line is allowed: its boundary cells keep their start value.)
 4. `make_holes.py`, `make_test_case.py`, `xlsx2memdif.py`, `convert_layout.py`, the plot and animation tools read and write the new files.
 
 ## 4. Later (not part of this change)

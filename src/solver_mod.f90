@@ -50,7 +50,7 @@ contains
     cm_out = cm_in - m%kmem / m%vol * acc
     if (m%nholes > 0) cm_out = cm_out - m%ksand / m%vol * acch
 
-    ! ghost cells read new values, in file order
+    ! boundary cells read new values, in entry order (rules, then exceptions)
     do i = 1, m%ng
       if (m%gsrc(i) > 0) then
         cout(m%gcell(i)) = m%gfac(i) * cout(m%gsrc(i))

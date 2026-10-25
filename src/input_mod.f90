@@ -26,8 +26,9 @@ module input_mod
     ! fluid cells: linear index, six neighbours (>0 cell, 0 none, <0 source), advection neighbour
     integer :: nf = 0
     integer, allocatable :: fcell(:), nb(:, :), advnb(:)
-    ! ghost cells, in evaluation order: value = gfac * cell(gsrc), or gfac if gsrc = 0
-    integer :: ng = 0
+    ! boundary cells (IDOMAIN = 2): nbound cells; ng entries in evaluation order (rules, then exceptions; a cell
+    ! on two sides appears twice, the later entry wins): value = gfac * cell(gsrc), or gfac if gsrc = 0
+    integer :: nbound = 0, ng = 0
     integer, allocatable :: gcell(:), gsrc(:)
     real(dp), allocatable :: gfac(:)
     ! source faces (linear index of the ILAY = 1 cell under each face)
@@ -315,7 +316,10 @@ contains
     type(str_t), allocatable :: nam(:), t(:)
     character(len=:), allocatable :: dir, f
     character(len=:), allocatable :: w
-    real(dp), allocatable :: buf(:), advmask(:)
+    real(dp), allocatable :: buf(:), advmask(:), fbuf(:), tfac(:)
+    integer, allocatable :: tcell(:), tsrc(:)
+    integer :: nbmax, nr, axis, kside, sgn, kin, nrules, nexc, r0, r1
+    character(len=:), allocatable :: side, rule
     integer, allocatable :: idom(:), kmap(:)
     integer, allocatable :: isface(:, :)           ! 0 none, 1 membrane, 2 hole, 3 closed
     integer :: nn, nt, i0, i1, i, k, p, d, ir, il, ic, jr, jl, jc, ios, tr, tl, tc, ip
@@ -354,6 +358,7 @@ contains
     call read_array(t, i0, i1, 'idomain', f, buf)
     idom = nint(buf)
     if (any(idom < 0 .or. idom > 2)) call fatal('IDOMAIN must contain 0, 1 or 2')
+    m%nbound = count(idom == 2)
 
     ! IC
     f = pkg_path(nam, nn, 'ic', dir, .true.)
@@ -394,32 +399,25 @@ contains
     m%vol = get_real(t, i0, i1, 'volume', f)
     m%cm0 = get_real(t, i0, i1, 'start_conc', f)
     call need_block(t, nt, 'faces', f, i0, i1)
-    allocate (m%face(i1 - i0 + 1), m%fkind(i1 - i0 + 1), isface(m%nrow, m%nlay))
+    allocate (fbuf(m%nlay * m%nrow), isface(m%nrow, m%nlay), m%face(m%nlay * m%nrow), m%fkind(m%nlay * m%nrow))
+    call read_array(t, i0, i1, 'faces', f, fbuf)
     isface = 0
     m%nfaces = 0
-    do i = i0, i1
-      read (t(i)%s, *, iostat=ios) il, ir
-      if (ios /= 0) call fatal('bad face line in ' // trim(f))
-      if (ir < 1 .or. ir > m%nrow .or. il < 1 .or. il > m%nlay) call fatal('face outside the grid in ' // trim(f))
-      if (isface(ir, il) /= 0) call fatal('face listed twice in ' // trim(f))
-      w = lower(word(t(i)%s, 3))
-      select case (w)
-      case ('', 'membrane')
-        isface(ir, il) = 1
-      case ('hole')
-        isface(ir, il) = 2
-        m%nholes = m%nholes + 1
-      case ('closed')
-        isface(ir, il) = 3
-        m%nclosed = m%nclosed + 1
-      case default
-        call fatal('face type must be MEMBRANE, HOLE or CLOSED in ' // trim(f))
-      end select
-      if (isface(ir, il) /= 3) then
-        m%nfaces = m%nfaces + 1
-        m%face(m%nfaces) = lin(m, il, ir, 1)
-        m%fkind(m%nfaces) = isface(ir, il)
-      end if
+    do il = 1, m%nlay
+      do ir = 1, m%nrow
+        k = nint(fbuf((il - 1) * m%nrow + ir))
+        if (k < 0 .or. k > 3) call fatal('FACES must contain 0 (none), 1 (membrane), 2 (hole) or 3 (closed) in ' // trim(f))
+        if (k == 0) cycle
+        if (idom(lin(m, il, ir, 1)) /= 1) call fatal('a face lies over a cell that is not a fluid cell (IDOMAIN /= 1 at ICOL = 1)')
+        isface(ir, il) = k
+        if (k == 2) m%nholes = m%nholes + 1
+        if (k == 3) m%nclosed = m%nclosed + 1
+        if (k /= 3) then
+          m%nfaces = m%nfaces + 1
+          m%face(m%nfaces) = lin(m, il, ir, 1)
+          m%fkind(m%nfaces) = k
+        end if
+      end do
     end do
 
     ! ADV
@@ -465,32 +463,105 @@ contains
     ! BND
     f = pkg_path(nam, nn, 'bnd', dir, .true.)
     call read_lines(f, t, nt)
-    call need_block(t, nt, 'ghosts', f, i0, i1)
-    m%ng = i1 - i0 + 1
+    ! boundary cells (IDOMAIN = 2): the rules of the sides first, then the per-cell exceptions, in file order
+    nbmax = 0
+    nrules = 0
+    nexc = 0
+    call find_block(t, nt, 'boundary', r0, r1, found)
+    if (found) nrules = r1 - r0 + 1
+    nbmax = count(idom == 2) * max(nrules, 0)
+    call find_block(t, nt, 'boundary_cells', i0, i1, found)
+    if (found) nexc = i1 - i0 + 1
+    nbmax = nbmax + nexc
+    allocate (tcell(max(nbmax, 1)), tsrc(max(nbmax, 1)), tfac(max(nbmax, 1)))
+    nr = 0
+    if (nrules > 0) then
+      call find_block(t, nt, 'boundary', r0, r1, found)
+      do i = r0, r1
+        side = lower(word(t(i)%s, 1))
+        rule = lower(word(t(i)%s, 2))
+        k = index(side, '=')
+        if (k < 2) call fatal('boundary line must start with a side like IROW=1 in ' // trim(f))
+        select case (side(1:k - 1))
+        case ('irow'); axis = 1; kin = m%nrow
+        case ('icol'); axis = 3; kin = m%ncol
+        case ('ilay'); axis = 2; kin = m%nlay
+        case default
+          call fatal('boundary side must be IROW=, ICOL= or ILAY= in ' // trim(f))
+        end select
+        select case (side(k + 1:))
+        case ('nrow'); kside = m%nrow
+        case ('ncol'); kside = m%ncol
+        case ('nlay'); kside = m%nlay
+        case default
+          kside = to_int(side(k + 1:), ios)
+          if (ios /= 0) call fatal('bad side index in ' // trim(f))
+        end select
+        if (kin < 2 .or. (kside /= 1 .and. kside /= kin)) call fatal('a boundary side must be index 1 or the last index of its axis')
+        sgn = 1
+        if (kside /= 1) sgn = -1
+        do il = 1, m%nlay
+          do ir = 1, m%nrow
+            do ic = 1, m%ncol
+              p = lin(m, il, ir, ic)
+              if (idom(p) /= 2) cycle
+              if (axis == 1 .and. ir /= kside) cycle
+              if (axis == 2 .and. il /= kside) cycle
+              if (axis == 3 .and. ic /= kside) cycle
+              nr = nr + 1
+              tcell(nr) = p
+              select case (rule)
+              case ('fixed')
+                tsrc(nr) = 0
+                tfac(nr) = to_real(word(t(i)%s, 3), ios)
+                if (ios /= 0) call fatal('FIXED needs a value in ' // trim(f))
+              case ('copy', 'noflow')
+                tfac(nr) = 1.0_dp
+                if (rule == 'copy') then
+                  tfac(nr) = to_real(word(t(i)%s, 3), ios)
+                  if (ios /= 0) call fatal('COPY needs a factor in ' // trim(f))
+                end if
+                tsrc(nr) = lin(m, il + merge(sgn, 0, axis == 2), ir + merge(sgn, 0, axis == 1), ic + merge(sgn, 0, axis == 3))
+              case default
+                call fatal('boundary rule must be COPY, FIXED or NOFLOW in ' // trim(f))
+              end select
+            end do
+          end do
+        end do
+      end do
+    end if
+    call find_block(t, nt, 'boundary_cells', i0, i1, found)
+    if (found) then
+      do i = i0, i1
+        w = lower(word(t(i)%s, 4))
+        read (t(i)%s, *, iostat=ios) il, ir, ic
+        if (ios /= 0) call fatal('bad boundary_cells line in ' // trim(f))
+        nr = nr + 1
+        tcell(nr) = lin(m, il, ir, ic)
+        if (w == 'fixed') then
+          tsrc(nr) = 0
+          tfac(nr) = to_real(word(t(i)%s, 5), ios)
+        else if (w == 'copy') then
+          tl = to_int(word(t(i)%s, 5), ios)
+          tr = to_int(word(t(i)%s, 6), ios)
+          tc = to_int(word(t(i)%s, 7), ios)
+          tsrc(nr) = lin(m, tl, tr, tc)
+          tfac(nr) = to_real(word(t(i)%s, 8), ios)
+        else
+          call fatal('boundary_cells type must be COPY or FIXED in ' // trim(f))
+        end if
+        if (ios /= 0) call fatal('bad boundary_cells line in ' // trim(f))
+      end do
+    end if
+    m%ng = nr
     allocate (m%gcell(m%ng), m%gsrc(m%ng), m%gfac(m%ng))
-    do i = i0, i1
-      w = lower(word(t(i)%s, 4))
-      read (t(i)%s, *, iostat=ios) il, ir, ic
-      if (ios /= 0) call fatal('bad ghost line in ' // trim(f))
-      ip = i - i0 + 1
-      m%gcell(ip) = lin(m, il, ir, ic)
-      if (w == 'fixed') then
-        m%gsrc(ip) = 0
-        m%gfac(ip) = to_real(word(t(i)%s, 5), ios)
-      else if (w == 'copy') then
-        tl = to_int(word(t(i)%s, 5), ios)
-        tr = to_int(word(t(i)%s, 6), ios)
-        tc = to_int(word(t(i)%s, 7), ios)
-        m%gsrc(ip) = lin(m, tl, tr, tc)
-        m%gfac(ip) = to_real(word(t(i)%s, 8), ios)
-      else
-        call fatal('ghost type must be COPY or FIXED in ' // trim(f))
-      end if
-      if (ios /= 0) call fatal('bad ghost line in ' // trim(f))
-    end do
-    if (count(idom == 2) /= m%ng) call fatal('number of ghost lines differs from the number of IDOMAIN = 2 cells')
+    m%gcell = tcell(1:nr)
+    m%gsrc = tsrc(1:nr)
+    m%gfac = tfac(1:nr)
+    if (any(idom(m%gcell) /= 2)) call fatal('a boundary rule or boundary_cells line points at a cell with IDOMAIN /= 2')
 
-    call need_block(t, nt, 'neighbor_overrides', f, i0, i1)
+    call find_block(t, nt, 'neighbor_overrides', i0, i1, found)
+    if (.not. found) i1 = i0 - 1
     do i = i0, i1
       read (t(i)%s, *, iostat=ios) il, ir, ic
       if (ios /= 0) call fatal('bad override line in ' // trim(f))

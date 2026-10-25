@@ -13,7 +13,7 @@ Views (axis names follow docs/MODEL_SPEC.md: X = rows = IROW, Y = slices = ILAY,
   side  a section through the source: --side-plane xz (default, one slice = one tile of the
         spreadsheet) or yz. The source cell is drawn as an extra column on the left.
 Frames are the field_*.csv files of RUN_DIR (one per period); with --nam the initial state is
-added as the first frame. Solid cells are grey; ghost cells are hidden unless --show-ghost.
+added as the first frame. Solid cells are grey; boundary cells are hidden unless --show-boundary.
 """
 import argparse
 import glob
@@ -62,7 +62,7 @@ def read_field(path):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument('run_dir', help='folder with field_*.csv')
-    ap.add_argument('--nam', help='name file of the run: gives solid/ghost cells, source footprint, initial frame')
+    ap.add_argument('--nam', help='name file of the run: gives solid/boundary cells, source footprint, initial frame')
     ap.add_argument('--out', default='solute.gif')
     ap.add_argument('--face', type=on_off, default=True, metavar='on|off', help='face view (default on)')
     ap.add_argument('--side', type=on_off, default=True, metavar='on|off', help='side view (default on)')
@@ -78,7 +78,7 @@ def main():
     ap.add_argument('--cmap', default='viridis')
     ap.add_argument('--fps', type=float, default=4.0)
     ap.add_argument('--dpi', type=int, default=90)
-    ap.add_argument('--show-ghost', action='store_true')
+    ap.add_argument('--show-boundary', action='store_true')
     ap.add_argument('--no-initial', action='store_true', help='do not add the initial state as first frame')
     a = ap.parse_args()
     if not (a.face or a.side):
@@ -100,7 +100,7 @@ def main():
         if (m.nx, m.ny, m.nz) != (nx, ny, nz):
             sys.exit('name file and field files have different grid sizes')
         for (x, iy, iz), code in m.idom.items():
-            if code == 0 or (code == 2 and not a.show_ghost):
+            if code == 0 or (code == 2 and not a.show_boundary):
                 hidden[iy - 1, x - 1, iz - 1] = True
         faces = list(m.faces)                                                   # (IROW, ILAY)
         c0 = np.zeros((ny, nx, nz))

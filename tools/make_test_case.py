@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Write small synthetic memdif3d input sets for testing (stdlib only).
 
-    python3 make_test_case.py open   <outdir>   off-centre rectangular source, different ghost rules,
+    python3 make_test_case.py open   <outdir>   off-centre rectangular source, different boundary rules,
                                                 sorption, advection, a neighbour override, 2 min step
-    python3 make_test_case.py closed <outdir>   sealed box without ghost cells: mass is conserved and the
+    python3 make_test_case.py closed <outdir>   sealed box without boundary cells: mass is conserved and the
                                                 concentration must end up uniform (analytic answer)
     options: --diffusion D   sand diffusion (default 0.2 open / 0.3 closed); a large value breaks stability
 
@@ -41,7 +41,7 @@ def build(case, diffusion):
     def ring(x, y, z):
         return x in (1, nx) or y in (1, ny) or z == nz
 
-    code, ghosts = {}, {}
+    code, bcells = {}, {}
     for y in range(1, ny + 1):
         for x in range(1, nx + 1):
             for z in range(1, nz + 1):
@@ -55,27 +55,17 @@ def build(case, diffusion):
                 elif ring(x, y, z):
                     code[p] = 2
                     if x == 1:
-                        ghosts[p] = ('COPY', (2, y, z), 0.82)
+                        bcells[p] = ('COPY', (2, y, z), 0.82)
                     elif x == nx:
-                        ghosts[p] = ('COPY', (nx - 1, y, z), 0.5)
+                        bcells[p] = ('COPY', (nx - 1, y, z), 0.5)
                     elif y == 1:
-                        ghosts[p] = ('COPY', (x, 2, z), 0.9)
+                        bcells[p] = ('COPY', (x, 2, z), 0.9)
                     elif y == ny:
-                        ghosts[p] = ('FIXED', None, 0.0)
+                        bcells[p] = ('FIXED', None, 0.0)
                     else:
-                        ghosts[p] = ('COPY', (x, y, nz - 1), 0.82)
+                        bcells[p] = ('COPY', (x, y, nz - 1), 0.82)
                 else:
                     code[p] = 1
-
-    # ghost evaluation order: constants first, then copies after the ghosts they read
-    order = [p for p, g in ghosts.items() if g[0] == 'FIXED']
-    pending = {p: g for p, g in ghosts.items() if g[0] == 'COPY'}
-    while pending:
-        ready = [p for p, g in pending.items() if g[1] not in pending]
-        assert ready, 'circular ghost dependencies'
-        for p in sorted(ready, key=lambda q: (q[2], q[1], q[0])):
-            order.append(p)
-            del pending[p]
 
     def arr(name, f, fmt):
         lines = [f'  {name}', '    INTERNAL']
@@ -106,24 +96,26 @@ def build(case, diffusion):
     files['t.dsp'] = (''.join(f'BEGIN {n}\n  DIFFUSION {d["D"]!r}\n  TORTUOSITY {d["t"]!r}\n  POROSITY {d["ph"]!r}\n'
                               f'  LENGTH {d["l"]!r}\nEND {n}\n' for n, d in (('sand', sand), ('membrane', memb))))
     files['t.mst'] = f'BEGIN options\n  POROSITY {por!r}\n  BULK_DENSITY {rho!r}\n  KD {kd!r}\nEND options\n'
-    files['t.src'] = (f'BEGIN source\n  VOLUME {vol!r}\n  START_CONC {cm0!r}\nEND source\nBEGIN faces\n' +
-                      ''.join(f'  {y} {x}\n' for x, y in sorted(faces, key=lambda q: (q[1], q[0]))) + 'END faces\n')
+    fmap = ''.join(f'    # ILAY {y}\n    ' + ' '.join('1' if (x, y) in faces else '0' for x in range(1, nx + 1)) + '\n'
+                   for y in range(1, ny + 1))
+    files['t.src'] = (f'BEGIN source\n  VOLUME {vol!r}\n  START_CONC {cm0!r}\nEND source\n'
+                      f'BEGIN faces\n  FACES\n    INTERNAL\n{fmap}END faces\n')
     files['t.adv'] = (f'BEGIN options\n  VELOCITY {vel!r}\nEND options\nBEGIN griddata\n'
                       f'{arr("ADVMASK", lambda p: adv[p], str)}END griddata\n')
-    gl = []
-    for p in order:
-        kind, src, val = ghosts[p]
-        gl.append(f'  {p[1]} {p[0]} {p[2]} FIXED {val!r}' if kind == 'FIXED'
-                  else f'  {p[1]} {p[0]} {p[2]} COPY {src[1]} {src[0]} {src[2]} {val!r}')
+    # a later rule wins on an edge or corner and reads the cell set by an earlier rule, so the rules are listed
+    # from the lowest priority of the dict above (far end) to the highest (IROW = 1)
+    rules = ['  ICOL=NCOL COPY 0.82', '  ILAY=NLAY FIXED 0.0', '  ILAY=1 COPY 0.9', '  IROW=NROW COPY 0.5',
+             '  IROW=1 COPY 0.82'] if case == 'open' else []
     ov = []
-    if case == 'open':                     # two exceptions: skip a cell in +Y, and cut a link in -X
+    if case == 'open':                     # two exceptions: skip a cell in +LAY, and cut a link in -ROW
         ov = ['  8 4 6 +LAY SET 10 4 6', '  5 9 8 -ROW OMIT']
-    files['t.bnd'] = ('BEGIN ghosts\n' + '\n'.join(gl) + ('\n' if gl else '') + 'END ghosts\n'
+    files['t.bnd'] = ('BEGIN boundary\n' + '\n'.join(rules) + ('\n' if rules else '') + 'END boundary\n'
+                      'BEGIN boundary_cells\nEND boundary_cells\n'
                       'BEGIN neighbor_overrides\n' + '\n'.join(ov) + ('\n' if ov else '') + 'END neighbor_overrides\n')
     probes = '5 8 1\n  5 8 5' if case == 'open' else '3 4 1\n  3 4 4'
     files['t.oc'] = ('BEGIN options\n  DAILY_FIELD FILEOUT field_{period}.csv\n  PROBES FILEOUT probes_{period}.csv\n'
                      '  RESTART FILEOUT restart.dat\nEND options\nBEGIN probes\n  SOURCE\n  ' + probes + '\nEND probes\n')
-    info = dict(nfluid=nfluid, vol=vol, cm0=cm0, retardation=por + rho * kd, nx=nx, ny=ny, nz=nz)
+    info = dict(nfluid=nfluid, vol=vol, cm0=cm0, retardation=por + rho * kd, nx=nx, ny=ny, nz=nz, bcells=bcells)
     return files, info
 
 

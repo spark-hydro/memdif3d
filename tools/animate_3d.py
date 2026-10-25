@@ -9,7 +9,7 @@ pan; the Play button and the slider run the time series and the view stays where
 
 Axes (mm): x = distance from the membrane (ICOL), y = IROW (rows), z = ILAY (columns). The source cell is the
 slab at x < 0 coloured by its concentration. Little squares at the membrane plane mark the faces:
-grey = membrane, red = hole, black = closed. Solid and ghost cells are not drawn.
+grey = membrane, red = hole, black = closed. Solid and boundary cells are not drawn.
 Frames are the field_*.csv files (one per period); the initial state is added as the first frame.
 
 Needs: numpy, plotly   (pip install numpy plotly)
@@ -81,7 +81,7 @@ def main():
         conv = lambda v: np.round(np.maximum(v, vmin), 5)                           # noqa: E731
 
     def cloud(c):
-        v = np.where(msk, conv(c[sl]), lo)              # solid and ghost cells sit at the floor: invisible
+        v = np.where(msk, conv(c[sl]), lo)              # solid and boundary cells sit at the floor: invisible
         return v.ravel()
 
     # the source slab: x from -1 to 0 under the footprint (cells are 1 mm, centres at integers)

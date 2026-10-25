@@ -85,19 +85,26 @@ class Model:
         src = read_blocks(pk['SRC'])
         self.V = scalar(src['source'], 'VOLUME')
         self.cm0 = scalar(src['source'], 'START_CONC')
-        self.kind = {(int(w[1]), int(w[0])): (w[2].upper() if len(w) > 2 else 'MEMBRANE') for w in src['faces']}
+        fmap = array(src['faces'], 'FACES', int)           # NLAY lines of NROW values: 0 none, 1 membrane, 2 hole, 3 closed
+        names = {1: 'MEMBRANE', 2: 'HOLE', 3: 'CLOSED'}
+        self.kind = {}
+        for il in range(1, self.ny + 1):
+            for ir in range(1, self.nx + 1):
+                v = fmap[(il - 1) * self.nx + ir - 1]
+                if v:
+                    self.kind[(ir, il)] = names[v]
         self.faces = [f for f, k in self.kind.items() if k != 'CLOSED']
         self.v = scalar(read_blocks(pk['ADV'])['options'], 'VELOCITY')
         bnd = read_blocks(pk['BND'])
-        self.ghosts = []
-        for w in bnd['ghosts']:
+        self.bcells = self.boundary_rules(bnd.get('boundary', []))       # side rules first
+        for w in bnd.get('boundary_cells', []):                           # then the per-cell exceptions
             p = cell(w[:3])
             if w[3].upper() == 'COPY':
-                self.ghosts.append((p, 'COPY', cell(w[4:7]), float(w[7])))
+                self.bcells.append((p, 'COPY', cell(w[4:7]), float(w[7])))
             else:
-                self.ghosts.append((p, 'FIXED', None, float(w[4])))
+                self.bcells.append((p, 'FIXED', None, float(w[4])))
         self.over = {}
-        for w in bnd['neighbor_overrides']:
+        for w in bnd.get('neighbor_overrides', []):
             p, d = cell(w[:3]), self.DIRS_FILE[w[3].upper()]
             if w[4].upper() == 'OMIT':
                 self.over[(p, d)] = None
@@ -108,6 +115,35 @@ class Model:
         self.fset = {f for f, k in self.kind.items() if k == 'MEMBRANE'}
         self.hset = {f for f, k in self.kind.items() if k == 'HOLE'}
         self.fluid = [p for p, c in self.idom.items() if c == 1]
+
+    def boundary_rules(self, lines):
+        """expand 'IROW=1 COPY 0.82' style lines to (cell, kind, source cell, value) in order"""
+        size = {'IROW': self.nx, 'ILAY': self.ny, 'ICOL': self.nz}
+        axis = {'IROW': 0, 'ILAY': 1, 'ICOL': 2}           # position in the tuple (x, y, z) = (row, lay, col)
+        out = []
+        for w in lines:
+            name, k = w[0].upper().split('=')
+            n = size[name]
+            kside = {'NROW': self.nx, 'NLAY': self.ny, 'NCOL': self.nz}.get(k.upper()) or int(k)
+            if kside not in (1, n) or n < 2:
+                raise ValueError('a boundary side must be index 1 or the last index: ' + ' '.join(w))
+            step = 1 if kside == 1 else -1
+            rule = w[1].upper()
+            for y in range(1, self.ny + 1):
+                for x in range(1, self.nx + 1):
+                    for z in range(1, self.nz + 1):
+                        p = (x, y, z)
+                        if self.idom[p] != 2 or p[axis[name]] != kside:
+                            continue
+                        if rule == 'FIXED':
+                            out.append((p, 'FIXED', None, float(w[2])))
+                        elif rule in ('COPY', 'NOFLOW'):
+                            q = list(p)
+                            q[axis[name]] += step
+                            out.append((p, 'COPY', tuple(q), float(w[2]) if rule == 'COPY' else 1.0))
+                        else:
+                            raise ValueError('boundary rule must be COPY, FIXED or NOFLOW: ' + ' '.join(w))
+        return out
 
     DIRS_FILE = {'+ROW': '+X', '-ROW': '-X', '+LAY': '+Y', '-LAY': '-Y', '+COL': '+Z', '-COL': '-Z'}
     DIRS = {'+X': (1, 0, 0), '-X': (-1, 0, 0), '+Y': (0, 1, 0), '-Y': (0, -1, 0), '+Z': (0, 0, 1), '-Z': (0, 0, -1)}
@@ -144,7 +180,7 @@ class Model:
         CMn = CM - self.Km / self.V * sum(CM - C[(x, iy, 1)] for (x, iy) in self.faces if (x, iy) in self.fset)
         if self.hset:
             CMn -= self.Ks / self.V * sum(CM - C[(x, iy, 1)] for (x, iy) in self.hset)
-        for p, kind, t, val in self.ghosts:
+        for p, kind, t, val in self.bcells:
             N[p] = val * N[t] if kind == 'COPY' else val
         return N, CMn
 

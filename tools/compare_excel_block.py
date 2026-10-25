@@ -6,7 +6,7 @@ time block of 3d_nonzeroboundry.xlsx, read as a stream, so huge files are fine).
 
 --first-row is the first sheet row of the block (43 rows). Needs numpy. The column layout is the one
 of Reduced_Matrix.xlsx (tiles at columns 1, 27, ..., see docs/MODEL_SPEC.md section 3).
-Prints the largest absolute difference over all cells, the ghost cells and the source cell.
+Prints the largest absolute difference over all cells, the boundary cells and the source cell.
 """
 import argparse
 import os
@@ -62,13 +62,13 @@ def main():
             for z in range(nz):
                 big[y, x, z] = vals.get(n2c(base(y) + z) + str(lo + x), 0.0)
     arr, info = AF.read_field(a.field)
-    ghost = np.zeros(arr.shape, bool)
+    bnd = np.zeros(arr.shape, bool)
     for (x, iy, iz), c in m.idom.items():
-        ghost[iy - 1, x - 1, iz - 1] = (c == 2)
+        bnd[iy - 1, x - 1, iz - 1] = (c == 2)
     cms = [vals.get(n2c(base(iy - 1) - 1) + str(lo + x - 1)) for (x, iy) in m.faces]
     print(f"step {info['step']}  ({info['minutes']:.0f} min)")
     print(f'all cells        max abs diff {np.abs(arr - big).max():.2e}')
-    print(f'ghost cells      max abs diff {np.abs(arr - big)[ghost].max():.2e}')
+    print(f'boundary cells      max abs diff {np.abs(arr - big)[bnd].max():.2e}')
     print(f"source cell      memdif3d {info['cm']:.15f}   sheet {np.mean(cms):.15f}")
 
 

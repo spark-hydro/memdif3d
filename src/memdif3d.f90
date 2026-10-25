@@ -84,7 +84,7 @@ program memdif3d
   print '(a)', ' Run started ' // run_stamp()
   print '(a)', ' Reading ' // trim(namefile) // ' . . .'
   if (len_trim(m%title) > 0) print '(a)', ' case: ' // trim(m%title)
-  print '(a,3(i0,1x),a,i0,a,i0,a,i0,a)', 'grid (lay row col): ', m%nlay, m%nrow, m%ncol, ' | fluid ', m%nf, ' ghost ', m%ng, &
+  print '(a,3(i0,1x),a,i0,a,i0,a,i0,a)', 'grid (lay row col): ', m%nlay, m%nrow, m%ncol, ' | fluid ', m%nf, ' boundary ', m%nbound, &
     ' source faces ', m%nfaces, ''
   if (m%nholes > 0 .or. m%nclosed > 0) print '(a,i0,a,i0,a,i0)', 'faces: membrane ', m%nfaces - m%nholes, &
     ' | hole ', m%nholes, ' | closed ', m%nclosed

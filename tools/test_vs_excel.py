@@ -72,7 +72,7 @@ for z in range(1,44):
                 cls[k]+=1; ex.setdefault(k,(a,(z,y,x),g(a),N[(z,y,x)],F.get(a)))
 print(cls)
 for k,v in ex.items(): print(k,v)
-print('---- constants where a formula is expected (x=24 ghost, z in 1..43):')
+print('---- constants where a formula is expected (far boundary, z in 1..43):')
 const_x24=collections.defaultdict(list)
 for y in range(1,28):
     for z in range(1,44):

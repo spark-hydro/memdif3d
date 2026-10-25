@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Draw the model domain from the input files, to scale: source, membrane, sand, plate, ghost cells.
+"""Draw the model domain from the input files, to scale: source, membrane, sand, plate, boundary cells.
 
     python3 plot_domain.py path/to/memdif3d.nam --out domain.png [--iy 15]
 
@@ -22,7 +22,7 @@ from matplotlib.patches import Rectangle, Patch
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import memdif_proto as P  # noqa: E402
 
-COL = dict(sand='#f2dfb0', solid='#8c8c8c', ghost='#bfd9ee', source='#3a78b5', membrane='#c0392b', hole='#ffffff', closed='#222222')
+COL = dict(sand='#f2dfb0', solid='#8c8c8c', boundary='#bfd9ee', source='#3a78b5', membrane='#c0392b', hole='#ffffff', closed='#222222')
 
 
 def main():
@@ -54,7 +54,7 @@ def main():
         for ix in range(1, m.nx + 1):
             for z in range(1, m.nz + 1):
                 code = m.idom[(ix, iy, z)]
-                col = COL['sand'] if code == 1 else COL['ghost'] if code == 2 else COL['solid']
+                col = COL['sand'] if code == 1 else COL['boundary'] if code == 2 else COL['solid']
                 x0 = lm + (z - 1)
                 if xr and (x0 > xr[1] or x0 + 1 < xr[0]):
                     continue
@@ -105,7 +105,7 @@ def main():
             elif k == 'MEMBRANE':
                 col = COL['membrane']
             else:
-                col = COL['sand'] if code == 1 else COL['ghost'] if code == 2 else COL['solid']
+                col = COL['sand'] if code == 1 else COL['boundary'] if code == 2 else COL['solid']
             ap_.add_patch(Rectangle((y - 0.5, ix - 0.5), 1, 1, fc=col, ec='#666', lw=0.3))
     ap_.set_xlim(0.5, m.ny + 0.5)
     ap_.set_ylim(0.5, m.nx + 0.5)
@@ -121,7 +121,7 @@ def main():
     if any(k == 'CLOSED' for k in m.kind.values()):
         items.append(Patch(fc=COL['closed'], ec='k', label='closed face'))
     items += [Patch(fc=COL['sand'], ec='#9a8f70', label='sand (fluid) cell'), Patch(fc=COL['solid'], ec='k', label='solid plate'),
-              Patch(fc=COL['ghost'], ec='#7a8a99', label='ghost (boundary) cell')]
+              Patch(fc=COL['boundary'], ec='#7a8a99', label='boundary cell')]
     fig.legend(handles=items, loc='lower center', ncol=len(items), frameon=False)
     fig.tight_layout(rect=(0, 0.04, 1, 1))
     fig.savefig(a.out, dpi=a.dpi)

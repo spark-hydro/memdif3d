@@ -4,7 +4,7 @@
     python3 plot_domain_3d.py path/to/memdif3d.nam --out domain3d.html
 
 Boxes (to scale, mm): source cell, membrane faces (red; holes open, closed faces black), solid plate (grey),
-sand cells (tan), ghost boundary cells (blue). Two translucent planes mark the cuts used by the 2D views:
+sand cells (tan), boundary cells (blue). Two translucent planes mark the cuts used by the 2D views:
 the side view (XZ at one ILAY) and the face view (XY at ICOL = 1). Drag to rotate, scroll to zoom.
 Axes: x = Z (distance from the membrane, ICOL), y = IROW (rows), z = ILAY (columns).
 
@@ -56,10 +56,10 @@ def main():
     fxa, fxb, fya, fyb = fx[0] - h, fx[-1] + h, fy[0] - h, fy[-1] + h
 
     tr = []
-    # sand block (fluid bounding box) and ghost shell (whole grid)
+    # sand block (fluid bounding box) and boundary shell (whole grid)
     gx0, gx1 = 0.5, m.nx + 0.5
     gy0, gy1 = 0.5, m.ny + 0.5
-    tr.append(box(lm, xmax, gx0, gx1, gy0, gy1, '#7fb2e5', 0.10, 'ghost (boundary) cells'))
+    tr.append(box(lm, xmax, gx0, gx1, gy0, gy1, '#7fb2e5', 0.10, 'boundary cells'))
     bx = [p[0] for p in fl]; by = [p[1] for p in fl]; bz = [p[2] for p in fl]
     tr.append(box(zlo(min(bz)), zlo(max(bz)) + 1, min(bx) - h, max(bx) + h, min(by) - h, max(by) + h, '#e8c871', 0.18, 'sand (fluid) cells'))
     # solid plate: the rows of cells at ICOL = 1 that are solid, in four strips around the footprint

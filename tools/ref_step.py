@@ -40,14 +40,14 @@ def step(C,CM,quirks=True):
     for y in range(7,22):
         for z in range(15,30): tot+=CM-c(z,y,0)
     CMn=CM-Km*tot/Vs
-    # ghost cells (new values, in dependency order)
+    # boundary cells (new values, in dependency order)
     for y in range(1,NY-1):
         for x in range(3,24):
             N[(1,y,x)]=0.82*N[(2,y,x)]; N[(NZ,y,x)]=0.82*N[(NZ-1,y,x)]
     for y in range(1,NY-1):
         for z in range(1,NZ+1):
             if quirks and y==26 and z in (1,NZ): N[(z,y,24)]=0.0   # corner reads the constant-0 neighbour
-            elif quirks and y in (20,26) and 2<=z<=NZ-1:   # Excel quirk 2: x=24 ghost is constant 0 here
+            elif quirks and y in (20,26) and 2<=z<=NZ-1:   # Excel quirk 2: far boundary is constant 0 here
                 N[(z,y,24)]=0.0
             else: N[(z,y,24)]=0.82*N[(z,y,23)]
     for z in range(1,NZ+1):

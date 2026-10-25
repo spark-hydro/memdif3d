@@ -17,6 +17,9 @@ memdif3d simulates diffusion from a fully mixed source cell through a membrane i
 - Run each simulation in its own folder: outputs go to the current directory.
 - The two irregularities of the spreadsheet (slice Y = 27 off-by-one, constant-0 edge cells in slices 20 and 26) are kept on purpose in `data/reduced_matrix` (861 `neighbor_overrides`, 82 `FIXED` boundary cells in its `.bnd`), because that set reproduces Excel to 2e-16. `data/reduced_matrix_intended` is the same case without them (`tools/make_intended_set.py`); after 28 days the source concentration is 0.0914 instead of 0.0899. Use the intended set for new work unless you compare with the spreadsheet.
 
+## Input formats
+The membrane is a `FACES` map (0 none, 1 membrane, 2 hole, 3 closed) and the boundary is five side rules (`IROW=1 COPY 0.82` ...) plus optional exceptions, see docs/INPUT_SPEC.md. `tools/convert_input.py` converts the older list formats; the rules reproduce the spreadsheet set exactly (84 exceptions: the 82 typed zeros and 2 corner cells).
+
 ## Validation status
 - Spreadsheet formulas == memdif3d rule on random fields (2e-16).
 - 576 steps equal the last block of 3d_nonzeroboundry.xlsx to 2.2e-16 over all cells (docs/VALIDATION.md).

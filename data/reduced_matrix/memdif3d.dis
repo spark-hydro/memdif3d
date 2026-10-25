@@ -1,5 +1,5 @@
 # memdif3d input written by xlsx2memdif.py from Reduced_Matrix.xlsx
-# IDOMAIN: 1 fluid cell, 0 solid (never used), 2 ghost cell (see BND)
+# IDOMAIN: 1 fluid cell, 0 solid (never used), 2 boundary cell (see BND)
 # Array order: ICOL fastest, then IROW, then ILAY (MODFLOW order). ICOL = 1 touches the membrane.
 BEGIN dimensions
   NLAY 29

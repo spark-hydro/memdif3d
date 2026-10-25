@@ -3,9 +3,9 @@
 
   python3 test_cases.py <memdif3d executable>
 
-open    off-centre 5x3 source, other grid size, mixed ghost rules, sorption, advection, neighbour
+open    off-centre 5x3 source, other grid size, mixed boundary rules, sorption, advection, neighbour
         overrides, 2 min step: Fortran field and probes must match the Python prototype (1e-12).
-closed  sealed box without ghost cells: V*CM + R*sum(c) must stay constant, and the long-time
+closed  sealed box without boundary cells: V*CM + R*sum(c) must stay constant, and the long-time
         concentration must be uniform and equal to the analytic value V*CM0 / (V + R*Nfluid).
 holes   membrane faces tagged HOLE (open, sand coefficient) or CLOSED: Fortran equals the prototype,
         and a sealed box with holes still conserves mass and reaches the analytic end state.
@@ -125,13 +125,21 @@ with tempfile.TemporaryDirectory() as d2, tempfile.TemporaryDirectory() as r2:
         fail('closed box did not reach the analytic uniform concentration')
 
 def tag_faces(nam, kinds):
-    """Rewrite the .src next to nam: faces listed in kinds get the keyword, in place."""
+    """Rewrite the FACES map of the .src next to nam: kinds {(irow, ilay): 'HOLE' | 'CLOSED' | 'MEMBRANE' | number}."""
     f = os.path.join(os.path.dirname(nam), 't.src')
-    out = []
+    code = {'MEMBRANE': 1, 'HOLE': 2, 'CLOSED': 3}
+    out, ilay = [], 0
     for line in open(f):
-        w = line.split()
-        if len(w) == 2 and w[0].isdigit() and (int(w[1]), int(w[0])) in kinds:      # file: ilay irow
-            line = f'  {w[0]} {w[1]} {kinds[(int(w[1]), int(w[0]))]}\n'
+        s = line.strip()
+        m = re.match(r'# ILAY (\d+)', s)
+        if m:
+            ilay = int(m.group(1))
+        elif ilay and s and not s.startswith('#') and s[0].isdigit():
+            vals = s.split()
+            for (irow, il), v in kinds.items():
+                if il == ilay:
+                    vals[irow - 1] = str(code.get(str(v).upper(), v))
+            line = '    ' + ' '.join(vals) + '\n'
         out.append(line)
     open(f, 'w').write(''.join(out))
 
@@ -139,6 +147,7 @@ def tag_faces(nam, kinds):
 with tempfile.TemporaryDirectory() as d4, tempfile.TemporaryDirectory() as r4:
     # ---------------- membrane with holes and closed faces against the prototype
     nam, info = make('open', d4)
+    # kinds are keyed (irow, ilay): the faces of the open case are IROW 6..10, ILAY 4..6
     tag_faces(nam, {(6, 4): 'HOLE', (8, 5): 'HOLE', (10, 6): 'hole', (7, 4): 'CLOSED', (9, 6): 'closed'})
     run(nam, r4)
     m = P.Model(nam)
@@ -157,7 +166,7 @@ with tempfile.TemporaryDirectory() as d4, tempfile.TemporaryDirectory() as r4:
 with tempfile.TemporaryDirectory() as d5, tempfile.TemporaryDirectory() as r5:
     # ---------------- sealed box with holes: still conservative, same analytic end state
     nam, info = make('closed', d5)
-    tag_faces(nam, {(3, 2): 'HOLE', (4, 3): 'HOLE', (5, 4): 'HOLE'})
+    tag_faces(nam, {(3, 2): 'HOLE', (4, 3): 'HOLE', (5, 4): 'HOLE'})      # faces of the closed case: IROW 3..5, ILAY 2..4
     run(nam, r5)
     m = P.Model(nam)
     R = info['retardation']
@@ -172,6 +181,32 @@ with tempfile.TemporaryDirectory() as d5, tempfile.TemporaryDirectory() as r5:
     print(f'holes in sealed box: mass drift {drift:.2e}, end state deviation {abs(cm - ceq):.2e}')
     if drift > 1e-12 or abs(cm - ceq) > 1e-6:
         fail('sealed box with holes is not conservative')
+
+with tempfile.TemporaryDirectory() as d6, tempfile.TemporaryDirectory() as r6:
+    # ---------------- the boundary rules expand to the per-cell rules of the generator, and bad input is refused
+    nam, info = make('open', d6)
+    m = P.Model(nam)
+    final = {}
+    for p, kind, t, v in m.bcells:                       # later entries win
+        final[p] = (kind, t, v)
+    want = {p: (g[0], g[1], g[2]) for p, g in info['bcells'].items()}
+    if final != want:
+        fail('the boundary rules do not expand to the generator\'s per-cell rules')
+    print(f'boundary rules: {len(m.bcells)} entries expand to {len(final)} cells, equal to the generator')
+    for what, edit in (('a face value of 5', lambda: tag_faces(nam, {(6, 4): 5})),
+                       ('a face over a solid cell', lambda: tag_faces(nam, {(1, 1): 'MEMBRANE'}))):
+        nam2, _ = make('open', d6)
+        edit()
+        r = run(nam2, r6, '--fresh', check=False)
+        if r.returncode == 0 or 'error' not in r.stdout:
+            fail(f'{what} must be refused:\n' + r.stdout)
+    nam2, _ = make('open', d6)
+    b = open(os.path.join(d6, 't.bnd')).read().replace('IROW=1 COPY 0.82', 'IROW=7 COPY 0.82')
+    open(os.path.join(d6, 't.bnd'), 'w').write(b)
+    r = run(nam2, r6, '--fresh', check=False)
+    if r.returncode == 0 or 'last index' not in r.stdout:
+        fail('a boundary side that is neither the first nor the last index must be refused:\n' + r.stdout)
+    print('bad face values, a face over a solid cell and a bad side are refused')
 
 with tempfile.TemporaryDirectory() as d3, tempfile.TemporaryDirectory() as r3:
     # ---------------- stability guard

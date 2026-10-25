@@ -397,7 +397,7 @@ END timing
                 lines.append('    ' + ' '.join(fmt(getter((x, iy, iz))) for iz in range(1, NZ + 1)))
         return '\n'.join(lines) + '\n'
 
-    w('memdif3d.dis', hdr + f'''# IDOMAIN: 1 fluid cell, 0 solid (never used), 2 ghost cell (see BND)
+    w('memdif3d.dis', hdr + f'''# IDOMAIN: 1 fluid cell, 0 solid (never used), 2 boundary cell (see BND)
 # Array order: ICOL fastest, then IROW, then ILAY (MODFLOW order). ICOL = 1 touches the membrane.
 BEGIN dimensions
   NLAY {NY}
@@ -497,8 +497,13 @@ BEGIN probes
   {cy} {cx} 6
 END probes
 ''')
+    # the writers above produce the list formats (a face line per face, a 'ghosts' list); compress them to the
+    # FACES map and the boundary side rules (the cells the rules do not give stay as boundary_cells)
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    import convert_input
+    convert_input.convert_dir(args.outdir, args.outdir)
     nfix, ncopy = len(fixed), len(ghost_copy)
-    print(f'cells: fluid={sum(1 for v in idomain.values() if v==1)} ghost={nfix+ncopy} '
+    print(f'cells: fluid={sum(1 for v in idomain.values() if v==1)} boundary={nfix+ncopy} '
           f'(copy {ncopy}, fixed {nfix}) solid={sum(1 for v in idomain.values() if v==0)}')
     print(f'neighbor overrides: {len(overrides)}  advection cells: {sum(advmask.values())}')
     print(f'wrote 9 files to {args.outdir}')
