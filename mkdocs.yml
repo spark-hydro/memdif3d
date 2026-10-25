@@ -1,6 +1,6 @@
 site_name: memdif3d
 site_description: Membrane diffusion in 3D, an explicit finite-volume model with MODFLOW-style text input
-site_url: https://seonggyu-park.readthedocs.io/en/latest/
+site_url: https://memdif3d.readthedocs.io/en/latest/
 repo_url: https://github.com/spark-hydro/memdif3d
 repo_name: spark-hydro/memdif3d
 edit_uri: edit/main/docs/

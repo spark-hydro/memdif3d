@@ -1,8 +1,8 @@
 # memdif3d
 
-[![Documentation Status](https://readthedocs.org/projects/seonggyu-park/badge/?version=latest)](https://seonggyu-park.readthedocs.io/en/latest/)
+[![Documentation Status](https://readthedocs.org/projects/memdif3d/badge/?version=latest)](https://memdif3d.readthedocs.io/en/latest/)
 
-**Documentation: <https://seonggyu-park.readthedocs.io/en/latest/>**
+**Documentation: <https://memdif3d.readthedocs.io/en/latest/>**
 
 Membrane diffusion in 3D: a fully mixed source cell leaks through a membrane into a porous medium, solved with an explicit finite-volume scheme on a regular grid (1 mm cells, 1 minute steps). It replaces a spreadsheet model that had to be run in pieces by hand.
 
