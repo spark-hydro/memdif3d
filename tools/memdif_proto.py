@@ -49,9 +49,9 @@ def array(block, name, conv):
 
 
 def cell(w):
-    """cell id of the files (ilay irow icol) -> tuple (x, y, z) = (row, col, lay)"""
+    """cell id of the files (ilay irow icol) -> tuple (x, y, z) = (row, lay, col)"""
     lay, row, col = (int(t) for t in w)
-    return (row, col, lay)
+    return (row, lay, col)
 
 
 class Model:
@@ -59,17 +59,16 @@ class Model:
         d = os.path.dirname(namefile)
         pk = {w[0].upper(): os.path.join(d, w[1]) for w in read_blocks(namefile)['packages']}
         dis = read_blocks(pk['DIS'])
-        # nlay, nrow, ncol in the files; here x = row, y = col, z = lay (cells are tuples (x, y, z))
-        nlay, self.nx, self.ny = (scalar(dis['dimensions'], k, int) for k in ('NLAY', 'NROW', 'NCOL'))
-        self.nz = nlay
+        # files: NLAY NROW NCOL; here a cell is a tuple (x, y, z) = (row, lay, col), z = 1 touches the membrane
+        self.ny, self.nx, self.nz = (scalar(dis['dimensions'], k, int) for k in ('NLAY', 'NROW', 'NCOL'))
         flat = array(dis['griddata'], 'IDOMAIN', int)
         ic = array(read_blocks(pk['IC'])['griddata'], 'STRT', float)
         am = array(read_blocks(pk['ADV'])['griddata'], 'ADVMASK', int)
         self.idom, self.c0, self.advmask = {}, {}, {}
         k = 0
-        for iz in range(1, self.nz + 1):                     # file order: col fastest, then row, then layer
+        for iy in range(1, self.ny + 1):                     # file order: col fastest, then row, then layer
             for x in range(1, self.nx + 1):
-                for iy in range(1, self.ny + 1):
+                for iz in range(1, self.nz + 1):
                     p = (x, iy, iz)
                     self.idom[p], self.c0[p], self.advmask[p] = flat[k], ic[k], am[k]
                     k += 1
@@ -86,7 +85,7 @@ class Model:
         src = read_blocks(pk['SRC'])
         self.V = scalar(src['source'], 'VOLUME')
         self.cm0 = scalar(src['source'], 'START_CONC')
-        self.kind = {(int(w[0]), int(w[1])): (w[2].upper() if len(w) > 2 else 'MEMBRANE') for w in src['faces']}
+        self.kind = {(int(w[1]), int(w[0])): (w[2].upper() if len(w) > 2 else 'MEMBRANE') for w in src['faces']}
         self.faces = [f for f, k in self.kind.items() if k != 'CLOSED']
         self.v = scalar(read_blocks(pk['ADV'])['options'], 'VELOCITY')
         bnd = read_blocks(pk['BND'])
@@ -110,7 +109,7 @@ class Model:
         self.hset = {f for f, k in self.kind.items() if k == 'HOLE'}
         self.fluid = [p for p, c in self.idom.items() if c == 1]
 
-    DIRS_FILE = {'+ROW': '+X', '-ROW': '-X', '+COL': '+Y', '-COL': '-Y', '+LAY': '+Z', '-LAY': '-Z'}
+    DIRS_FILE = {'+ROW': '+X', '-ROW': '-X', '+LAY': '+Y', '-LAY': '-Y', '+COL': '+Z', '-COL': '-Z'}
     DIRS = {'+X': (1, 0, 0), '-X': (-1, 0, 0), '+Y': (0, 1, 0), '-Y': (0, -1, 0), '+Z': (0, 0, 1), '-Z': (0, 0, -1)}
 
     def neighbours(self, p):

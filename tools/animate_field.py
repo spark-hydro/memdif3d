@@ -7,7 +7,7 @@
 
 Needs: numpy, matplotlib, Pillow   (pip install numpy matplotlib pillow)
 
-Views (axis names follow docs/MODEL_SPEC.md: X = rows, Y = slices, Z = away from the source)
+Views (axis names follow docs/MODEL_SPEC.md: X = rows = IROW, Y = slices = ILAY, Z = away from the source = ICOL)
   face  XY plane at one Z layer (default: the first layer beyond the plate; --face-z 1 shows the
         cells touching the membrane); the white dashed box is the source footprint.
   side  a section through the source: --side-plane xz (default, one slice = one tile of the
@@ -43,7 +43,7 @@ def on_off(s):
 
 
 def read_field(path):
-    """-> (array[IY, IX, IZ] = [col, row, lay], dict(period, step, minutes, cm))"""
+    """-> (array[ILAY, IROW, ICOL] = [Y, X, Z], dict(period, step, minutes, cm))"""
     rows, info, cur = [], {}, None
     for line in open(path):
         if line.startswith('#'):
@@ -56,8 +56,7 @@ def read_field(path):
             continue
         if line.strip():
             cur.append([float(t) for t in line.split(',')])
-    # file blocks are [ILAY, IROW, ICOL]; the tools index the array as [IY, IX, IZ] = [col, row, lay]
-    return np.array(rows).transpose(2, 1, 0), info
+    return np.array(rows), info                       # [ICOL, IROW, ILAY] = [ILAY, IROW, ICOL]
 
 
 def main():
@@ -68,9 +67,9 @@ def main():
     ap.add_argument('--face', type=on_off, default=True, metavar='on|off', help='face view (default on)')
     ap.add_argument('--side', type=on_off, default=True, metavar='on|off', help='side view (default on)')
     ap.add_argument('--face-z', type=int, default=None,
-                    help='IZ layer of the face view (default: first layer where most cells are fluid, or 1)')
+                    help='ICOL layer of the face view (default: first layer where most cells are fluid, or 1)')
     ap.add_argument('--side-plane', choices=['xz', 'yz'], default='xz')
-    ap.add_argument('--slice', type=int, default=None, help='IY (xz) or IX (yz) of the side view; default: source centre')
+    ap.add_argument('--slice', type=int, default=None, help='ILAY (xz) or IROW (yz) of the side view; default: source centre')
     ap.add_argument('--pattern', default='field_*.csv')
     ap.add_argument('--every', type=int, default=1, help='use every n-th file')
     ap.add_argument('--log', action='store_true', help='logarithmic colour scale')
@@ -103,7 +102,7 @@ def main():
         for (x, iy, iz), code in m.idom.items():
             if code == 0 or (code == 2 and not a.show_ghost):
                 hidden[iy - 1, x - 1, iz - 1] = True
-        faces = list(m.faces)                                                   # (IX, IY)
+        faces = list(m.faces)                                                   # (IROW, ILAY)
         c0 = np.zeros((ny, nx, nz))
         for (x, iy, iz), v in m.c0.items():
             c0[iy - 1, x - 1, iz - 1] = v
@@ -136,19 +135,19 @@ def main():
 
     def face_img(arr, hid):
         z = a.face_z - 1
-        img = np.where(hid[:, :, z], np.nan, arr[:, :, z])           # [IY, IX]
+        img = np.where(hid[:, :, z], np.nan, arr[:, :, z])           # [ILAY, IROW]
         return shaped(img)
 
     def side_img(arr, hid, cm):
         if a.side_plane == 'xz':
             k = (a.slice or cy) - 1
-            img = np.where(hid[k], np.nan, arr[k])                       # [IX, IZ]
+            img = np.where(hid[k], np.nan, arr[k])                       # [IROW, ICOL]
             src = np.full((nx, 1), np.nan)
             if box:
                 src[box[0] - 1:box[1]] = cm
         else:
             k = (a.slice or cx) - 1
-            img = np.where(hid[:, k, :], np.nan, arr[:, k, :])           # [IY, IZ]
+            img = np.where(hid[:, k, :], np.nan, arr[:, k, :])           # [ILAY, ICOL]
             src = np.full((ny, 1), np.nan)
             if box:
                 src[box[2] - 1:box[3]] = cm
@@ -165,21 +164,21 @@ def main():
         ims['face'] = ax.imshow(face_img(arr0, hidden), origin='lower', cmap=cmap, norm=norm, aspect='equal',
                                 extent=(0.5, nx + 0.5, 0.5, ny + 0.5), interpolation='nearest')
         ax.set_xlabel('IROW (row)')
-        ax.set_ylabel('ICOL (column)')
-        ax.set_title(f'face view  (XY, IZ = {a.face_z})', fontsize=10)
+        ax.set_ylabel('ILAY (column)')
+        ax.set_title(f'face view  (XY, ICOL = {a.face_z})', fontsize=10)
         if box:
             ax.add_patch(Rectangle((box[0] - 0.5, box[2] - 0.5), box[1] - box[0] + 1, box[3] - box[2] + 1,
                                    fill=False, ec='white', ls='--', lw=1))
     if a.side:
         ax = axes[ai]
         if a.side_plane == 'xz':
-            k, nrow, ylab, what = (a.slice or cy), nx, 'IROW (row)', f'IY = {a.slice or cy}'
+            k, nrow, ylab, what = (a.slice or cy), nx, 'IROW (row)', f'ILAY = {a.slice or cy}'
         else:
-            k, nrow, ylab, what = (a.slice or cx), ny, 'ICOL (column)', f'IX = {a.slice or cx}'
+            k, nrow, ylab, what = (a.slice or cx), ny, 'ILAY (column)', f'IROW = {a.slice or cx}'
         ims['side'] = ax.imshow(side_img(arr0, hidden, info0['cm']), origin='lower', cmap=cmap, norm=norm, aspect='equal',
                                 extent=(-0.5, nz + 0.5, 0.5, nrow + 0.5), interpolation='nearest')
         ax.axvline(0.5, color='white', lw=0.8)
-        ax.set_xlabel('ILAY (Z; 0 = source cell)')
+        ax.set_xlabel('ICOL (Z; 0 = source cell)')
         ax.set_ylabel(ylab)
         ax.set_title(f'side view  ({a.side_plane.upper()}, {what})', fontsize=10)
     cb = fig.colorbar(next(iter(ims.values())), ax=list(axes), shrink=0.85)

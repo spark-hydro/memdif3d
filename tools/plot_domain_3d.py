@@ -5,8 +5,8 @@
 
 Boxes (to scale, mm): source cell, membrane faces (red; holes open, closed faces black), solid plate (grey),
 sand cells (tan), ghost boundary cells (blue). Two translucent planes mark the cuts used by the 2D views:
-the side view (XZ at one IY) and the face view (XY at IZ = 1). Drag to rotate, scroll to zoom.
-Axes: x = Z (distance from the membrane, IZ), y = IX (rows), z = ICOL (columns).
+the side view (XZ at one ILAY) and the face view (XY at ICOL = 1). Drag to rotate, scroll to zoom.
+Axes: x = Z (distance from the membrane, ICOL), y = IROW (rows), z = ILAY (columns).
 
 Needs: plotly
 """
@@ -50,7 +50,7 @@ def main():
     fl = [p for p, c in code.items() if c == 1]
     sol = [p for p, c in code.items() if c == 0]
     gh = [p for p, c in code.items() if c == 2]
-    # plot x = distance from the membrane: cell IZ spans [lm + IZ - 1, lm + IZ]
+    # plot x = distance from the membrane: cell ICOL spans [lm + ICOL - 1, lm + ICOL]
     zlo = lambda iz: lm + iz - 1                                   # noqa: E731
     xmax = zlo(m.nz) + 1
     fxa, fxb, fya, fyb = fx[0] - h, fx[-1] + h, fy[0] - h, fy[-1] + h
@@ -62,7 +62,7 @@ def main():
     tr.append(box(lm, xmax, gx0, gx1, gy0, gy1, '#7fb2e5', 0.10, 'ghost (boundary) cells'))
     bx = [p[0] for p in fl]; by = [p[1] for p in fl]; bz = [p[2] for p in fl]
     tr.append(box(zlo(min(bz)), zlo(max(bz)) + 1, min(bx) - h, max(bx) + h, min(by) - h, max(by) + h, '#e8c871', 0.18, 'sand (fluid) cells'))
-    # solid plate: the rows of cells at IZ = 1 that are solid, in four strips around the footprint
+    # solid plate: the rows of cells at ICOL = 1 that are solid, in four strips around the footprint
     pz = max(p[2] for p in sol)
     sx0 = min(p[0] for p in sol) - h; sx1 = max(p[0] for p in sol) + h
     sy0 = min(p[1] for p in sol) - h; sy1 = max(p[1] for p in sol) + h
@@ -83,15 +83,15 @@ def main():
     def plane(pts, color, name):
         x, y, z = zip(*pts)
         return go.Mesh3d(x=x, y=y, z=z, i=[0, 0], j=[1, 2], k=[2, 3], color=color, opacity=0.30, name=name, showlegend=True, hoverinfo='name')
-    tr.append(plane([(0, gx0, iy), (xmax, gx0, iy), (xmax, gx1, iy), (0, gx1, iy)], '#ff8c00', f'side-view cut (XZ at IY = {iy})'))
+    tr.append(plane([(0, gx0, iy), (xmax, gx0, iy), (xmax, gx1, iy), (0, gx1, iy)], '#ff8c00', f'side-view cut (XZ at ILAY = {iy})'))
     zf = zlo(1) + 0.5
-    tr.append(plane([(zf, gx0, gy0), (zf, gx1, gy0), (zf, gx1, gy1), (zf, gx0, gy1)], '#9b59b6', 'face-view cut (XY at IZ = 1)'))
+    tr.append(plane([(zf, gx0, gy0), (zf, gx1, gy0), (zf, gx1, gy1), (zf, gx0, gy1)], '#9b59b6', 'face-view cut (XY at ICOL = 1)'))
 
     fig = go.Figure(tr)
     fig.update_layout(
-        title=f'memdif3d domain: {m.nx} x {m.ny} x {m.nz} cells of 1 mm (IROW x ICOL x ILAY), membrane {lm:g} mm',
-        scene=dict(xaxis=dict(title='ILAY (Z), away from the source (mm)'), yaxis=dict(title='IROW (X)'),
-                   zaxis=dict(title='Y = ICOL (columns)'), aspectmode='data', camera=dict(eye=dict(x=1.6, y=-1.9, z=1.1))),
+        title=f'memdif3d domain: {m.nx} x {m.ny} x {m.nz} cells of 1 mm (IROW x ILAY x ICOL), membrane {lm:g} mm',
+        scene=dict(xaxis=dict(title='ICOL (Z), away from the source (mm)'), yaxis=dict(title='IROW (X)'),
+                   zaxis=dict(title='Y = ILAY (columns)'), aspectmode='data', camera=dict(eye=dict(x=1.6, y=-1.9, z=1.1))),
         legend=dict(x=0.01, y=0.99), margin=dict(l=0, r=0, t=50, b=0), height=720)
     fig.write_html(a.out, include_plotlyjs=True, full_html=True)
     print(f'wrote {a.out}')

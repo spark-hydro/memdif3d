@@ -9,7 +9,7 @@ Fortran program for diffusion from a fully mixed source cell through a membrane 
 The author's longer log may exist as `WORKING.md` in an Obsidian vault folder `00_projects/3d_nonzeroboundry`; ask for the vault path if it is not among the added folders. The Excel files, the voice recording and run outputs are not in the repo.
 
 ## Working rules
-- Layout is MODFLOW style: ILAY, IROW, ICOL (1-based; arrays ICOL fastest, cell ids `ilay irow icol`). Lab axes: X = IROW, Y = ICOL, Z = ILAY (away from the source).
+- Layout uses MODFLOW names: ILAY (the old slices, Y), IROW (rows, X), ICOL (away from the source, Z); 1-based, arrays ICOL fastest, cell ids `ilay irow icol`, ICOL = 1 touches the membrane.
 - Keep `ref_step.py`, `memdif_proto.py` and the Fortran in step: tests compare them (tolerance 1e-12).
 - Run simulations in their own folder (outputs go to the current directory); never commit `daily_output/`, GIFs or build folders.
 - Do not push, tag or publish without the user's go-ahead. Authentication: SSH key per computer.

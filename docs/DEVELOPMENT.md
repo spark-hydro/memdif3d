@@ -13,7 +13,7 @@ Tools needed: gfortran 13+ (or Intel ifx), CMake 3.22+, make, Python 3. See BUIL
 memdif3d simulates diffusion from a fully mixed source cell through a membrane into a porous medium (explicit finite volume, 1 mm cells, 1 minute steps). It replaces a spreadsheet model (Reduced_Matrix.xlsx / 3d_nonzeroboundry.xlsx) that was run in pieces by hand. The program reads MODFLOW 6 style text packages (docs/INPUT_SPEC.md) and never reads Excel; `tools/xlsx2memdif.py` converts the spreadsheet once.
 
 ## Conventions
-- MODFLOW layout: NLAY x NROW x NCOL, arrays ICOL fastest then IROW then ILAY, cell ids `ilay irow icol` (docs/INPUT_SPEC.md). Mapping to the lab's axes in docs/MODEL_SPEC.md: X = IROW, Y = ICOL, Z = ILAY (away from the source; ILAY = 1 touches the membrane). The Python tools keep tuples (x, y, z) = (row, col, lay) internally. Old-layout sets (NX NY NZ) convert with `tools/convert_layout.py`; old restart files are refused.
+- MODFLOW names: NLAY x NROW x NCOL = 29 x 43 x 25, arrays ICOL fastest then IROW then ILAY, cell ids `ilay irow icol` (docs/INPUT_SPEC.md). Mapping to the lab's axes in docs/MODEL_SPEC.md: ILAY = Y + 1 (slices), IROW = X, ICOL = Z + 1 (away from the source; ICOL = 1 touches the membrane). The array order is the old one, only the names changed. The Python tools keep tuples (x, y, z) = (row, lay, col). Old sets (NX NY NZ, `# IY` tiles) convert with `tools/convert_layout.py`; old restart files are refused.
 - Run each simulation in its own folder: outputs go to the current directory.
 - The two irregularities of the spreadsheet (slice Y = 27 off-by-one, constant-0 edge cells in slices 20 and 26) are kept on purpose, as 861 `neighbor_overrides` and 82 `FIXED` ghost cells in `data/reduced_matrix/memdif3d.bnd`. Delete those lines for the intended pattern.
 
@@ -24,7 +24,7 @@ memdif3d simulates diffusion from a fully mixed source cell through a membrane i
 - Not yet compared: the VBA macro output (Day_NNN.xlsx, excel/DailyRun.bas), sorption and advection against a spreadsheet.
 
 ## Known limits (by design, so far)
-One source cell touching ILAY = 1; one uniform sand and membrane; cubic cells; advection only toward lower IROW; explicit scheme (the program stops when the coefficient sum is above 1; `--force` overrides).
+One source cell touching ICOL = 1; one uniform sand and membrane; cubic cells; advection only toward lower IROW; explicit scheme (the program stops when the coefficient sum is above 1; `--force` overrides).
 
 ## Ideas / next steps
 - Compare a VBA day with `field_001.csv` (tools/compare_excel_block.py works on any block of a sheet).

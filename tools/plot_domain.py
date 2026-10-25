@@ -3,9 +3,9 @@
 
     python3 plot_domain.py path/to/memdif3d.nam --out domain.png [--iy 15]
 
-Three panels: side view (XZ section at IY, everything to scale in mm), a zoom at the membrane, and a
-plan view of the cells that touch the membrane (IZ = 1). The membrane is not a layer of cells in the
-model: it is a mass-transfer resistance between the source and the IZ = 1 cells. It is drawn here at
+Three panels: side view (XZ section at ILAY, everything to scale in mm), a zoom at the membrane, and a
+plan view of the cells that touch the membrane (ICOL = 1). The membrane is not a layer of cells in the
+model: it is a mass-transfer resistance between the source and the ICOL = 1 cells. It is drawn here at
 its LENGTH from DSP so you can compare it with the 1 mm cells. A hole is a face without membrane.
 
 Needs: numpy, matplotlib
@@ -50,7 +50,7 @@ def main():
     ap_ = fig.add_subplot(gs[1, 1])
 
     def draw_side(axs, xr=None):
-        # x axis: distance from the membrane surface (mm); the sand cell IZ occupies [lm+(iz-1), lm+iz]
+        # x axis: distance from the membrane surface (mm); the sand cell ICOL occupies [lm+(iz-1), lm+iz]
         for ix in range(1, m.nx + 1):
             for z in range(1, m.nz + 1):
                 code = m.idom[(ix, iy, z)]
@@ -72,7 +72,7 @@ def main():
     ax.set_aspect('equal')
     ax.set_xlabel('distance from the membrane (mm)  [Z, away from the source]')
     ax.set_ylabel('IROW (rows)')
-    ax.set_title(f'Side view, slice IY = {iy} (to scale): {m.nx} x {m.ny} x {m.nz} cells of 1 mm; membrane {lm:g} mm;\n'
+    ax.set_title(f'Side view, slice ILAY = {iy} (to scale): {m.nx} x {m.ny} x {m.nz} cells of 1 mm; membrane {lm:g} mm;\n'
                  f'source {len(fx)} x {len(fy)} mm footprint, {depth:g} mm deep (V = {m.V:g} mm3)', fontsize=10, pad=12)
     ax.text(-depth / 2, fx[-1] + 2.2, 'source cell\n(one fully mixed value)', ha='center', va='bottom', fontsize=9)
 
@@ -91,9 +91,9 @@ def main():
     az.set_aspect('equal')
     az.set_xlabel('mm')
     az.set_title(f'Zoom at the membrane: membrane {lm:g} mm thick, sand cells 1 mm. In the model the membrane is a\n'
-                 f'resistance between the source and IZ = 1, not a row of cells.', fontsize=9)
+                 f'resistance between the source and ICOL = 1, not a row of cells.', fontsize=9)
 
-    # plan view at IZ = 1
+    # plan view at ICOL = 1
     for ix in range(1, m.nx + 1):
         for y in range(1, m.ny + 1):
             code = m.idom[(ix, y, 1)]
@@ -110,10 +110,10 @@ def main():
     ap_.set_xlim(0.5, m.ny + 0.5)
     ap_.set_ylim(0.5, m.nx + 0.5)
     ap_.set_aspect('equal')
-    ap_.set_xlabel('ICOL (columns)')
+    ap_.set_xlabel('ILAY (columns)')
     ap_.set_ylabel('IROW (rows)')
     nh = sum(1 for k in m.kind.values() if k == 'HOLE')
-    ap_.set_title(f'Plan view of the IZ = 1 layer: {len(m.kind)} faces, {nh} holes', fontsize=9)
+    ap_.set_title(f'Plan view of the ICOL = 1 layer: {len(m.kind)} faces, {nh} holes', fontsize=9)
 
     items = [Patch(fc=COL['source'], ec='k', label='source cell'), Patch(fc=COL['membrane'], ec='k', label='membrane face')]
     if nh:
@@ -125,7 +125,7 @@ def main():
     fig.legend(handles=items, loc='lower center', ncol=len(items), frameon=False)
     fig.tight_layout(rect=(0, 0.04, 1, 1))
     fig.savefig(a.out, dpi=a.dpi)
-    print(f'{a.out}: membrane {lm:g} mm, sand cells 1 mm, source {depth:g} mm deep, side slice IY = {iy}')
+    print(f'{a.out}: membrane {lm:g} mm, sand cells 1 mm, source {depth:g} mm deep, side slice ILAY = {iy}')
 
 
 if __name__ == '__main__':

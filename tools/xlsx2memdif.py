@@ -391,18 +391,18 @@ END timing
 
     def array(name, getter, fmt):
         lines = [f'  {name}', '    INTERNAL']
-        for iz in range(1, NZ + 1):
-            lines.append(f'    # ILAY {iz}  (rows IROW 1..{NX}, columns ICOL 1..{NY})')
+        for iy in range(1, NY + 1):
+            lines.append(f'    # ILAY {iy}  (rows IROW 1..{NX}, columns ICOL 1..{NZ})')
             for x in range(1, NX + 1):
-                lines.append('    ' + ' '.join(fmt(getter((x, iy, iz))) for iy in range(1, NY + 1)))
+                lines.append('    ' + ' '.join(fmt(getter((x, iy, iz))) for iz in range(1, NZ + 1)))
         return '\n'.join(lines) + '\n'
 
     w('memdif3d.dis', hdr + f'''# IDOMAIN: 1 fluid cell, 0 solid (never used), 2 ghost cell (see BND)
-# Array order: ICOL fastest, then IROW, then ILAY (MODFLOW order). ILAY = 1 touches the membrane.
+# Array order: ICOL fastest, then IROW, then ILAY (MODFLOW order). ICOL = 1 touches the membrane.
 BEGIN dimensions
-  NLAY {NZ}
+  NLAY {NY}
   NROW {NX}
-  NCOL {NY}
+  NCOL {NZ}
 END dimensions
 
 BEGIN griddata
@@ -433,8 +433,8 @@ BEGIN options
   KD {kd!r}
 END options
 ''')
-    fl = '\n'.join(f'  {x} {iy}' for (x, iy) in sorted(faces, key=lambda q: (q[1], q[0])))
-    w('memdif3d.src', hdr + f'''# One fully mixed source cell. Its faces touch ILAY = 1 of the listed (IROW, ICOL) cells.
+    fl = '\n'.join(f'  {iy} {x}' for (x, iy) in sorted(faces, key=lambda q: (q[1], q[0])))
+    w('memdif3d.src', hdr + f'''# One fully mixed source cell. Its faces touch ICOL = 1 of the listed (ILAY, IROW) cells.
 BEGIN source
   VOLUME {V!r}
   START_CONC {cm0!r}
@@ -455,23 +455,23 @@ BEGIN griddata
 
     gl = []
     for p in sorted(fixed, key=lambda q: (q[1], q[0], q[2])):     # constants first: COPY lines may read them
-        gl.append(f'  {p[2]} {p[0]} {p[1]} FIXED {fixed[p]!r}')
+        gl.append(f'  {p[1]} {p[0]} {p[2]} FIXED {fixed[p]!r}')
     for p in order:
         t, fac = ghost_copy[p]
-        gl.append(f'  {p[2]} {p[0]} {p[1]} COPY {t[2]} {t[0]} {t[1]} {fac!r}')
+        gl.append(f'  {p[1]} {p[0]} {p[2]} COPY {t[1]} {t[0]} {t[2]} {fac!r}')
     ol = []
     for pos, d, kind, t in sorted(overrides, key=lambda q: (q[0][1], q[0][0], q[0][2], q[1])):
-        dn = {'+X': '+ROW', '-X': '-ROW', '+Y': '+COL', '-Y': '-COL', '+Z': '+LAY', '-Z': '-LAY'}[d]
+        dn = {'+X': '+ROW', '-X': '-ROW', '+Y': '+LAY', '-Y': '-LAY', '+Z': '+COL', '-Z': '-COL'}[d]
         if kind == 'OMIT':
-            ol.append(f'  {pos[2]} {pos[0]} {pos[1]} {dn} OMIT')
+            ol.append(f'  {pos[1]} {pos[0]} {pos[2]} {dn} OMIT')
         elif t == 'M':
-            ol.append(f'  {pos[2]} {pos[0]} {pos[1]} {dn} SOURCE')
+            ol.append(f'  {pos[1]} {pos[0]} {pos[2]} {dn} SOURCE')
         else:
-            ol.append(f'  {pos[2]} {pos[0]} {pos[1]} {dn} SET {t[2]} {t[0]} {t[1]}')
+            ol.append(f'  {pos[1]} {pos[0]} {pos[2]} {dn} SET {t[1]} {t[0]} {t[2]}')
     w('memdif3d.bnd', hdr + f'''# Ghost cells (IDOMAIN = 2), evaluated in file order after the fluid cells and the source.
 #   cell ids are: ilay irow icol.   COPY = factor * new value of the cell (slay srow scol)   FIXED = constant
 # Neighbour overrides replace the default neighbour of a fluid cell in one direction.
-#   default: the 6 face neighbours that are not solid; ILAY = 1 under a source face looks at the source.
+#   default: the 6 face neighbours that are not solid; ICOL = 1 under a source face looks at the source.
 BEGIN ghosts
 {chr(10).join(gl)}
 END ghosts
@@ -493,8 +493,8 @@ END options
 # written every time step: the source cell, then cells at the middle of the source footprint
 BEGIN probes
   SOURCE
-  1 {cx} {cy}
-  6 {cx} {cy}
+  {cy} {cx} 1
+  {cy} {cx} 6
 END probes
 ''')
     nfix, ncopy = len(fixed), len(ghost_copy)

@@ -7,7 +7,7 @@
 Open the HTML in any browser (no server, no internet). Drag to rotate, scroll to zoom, right-drag to
 pan; the Play button and the slider run the time series and the view stays where you put it.
 
-Axes (mm): x = distance from the membrane (IZ), y = IX (rows), z = ICOL (columns). The source cell is the
+Axes (mm): x = distance from the membrane (ICOL), y = IROW (rows), z = ILAY (columns). The source cell is the
 slab at x < 0 coloured by its concentration. Little squares at the membrane plane mark the faces:
 grey = membrane, red = hole, black = closed. Solid and ghost cells are not drawn.
 Frames are the field_*.csv files (one per period); the initial state is added as the first frame.
@@ -63,7 +63,7 @@ def main():
     if not a.no_initial:
         frames.insert(0, (c0, dict(period=0, step=0, minutes=0.0, cm=m.cm0)))
 
-    # crop to the fluid cells; the grid is [IY, IX, IZ]
+    # crop to the fluid cells; the grid is [ILAY, IROW, ICOL]
     ys, xs, zs = (np.where(fluid.any(axis=tuple(j for j in range(3) if j != k)))[0] for k in range(3))
     sl = (slice(ys[0], ys[-1] + 1), slice(xs[0], xs[-1] + 1), slice(zs[0], zs[-1] + 1))
     msk = fluid[sl]
@@ -100,7 +100,7 @@ def main():
     def cm_val(f):
         return [float(conv(np.array(f[1]['cm'])))] * 8
 
-    # plot axes: x = distance (IZ), y = IX, z = IY
+    # plot axes: x = distance (ICOL), y = IROW, z = ILAY
     vol = go.Volume(x=gz.ravel(), y=gx.ravel(), z=gy.ravel(), value=cloud(frames[0][0]),
                     isomin=lo + 0.02 * (hi - lo), isomax=hi, surface_count=a.surfaces, opacity=a.opacity,
                     coloraxis='coloraxis', caps=dict(x_show=False, y_show=False, z_show=False), name='solute',
@@ -138,8 +138,8 @@ def main():
         title=f"memdif3d: {m.nx} x {m.ny} x {m.nz} cells, {len(m.faces)} source faces"
               + (f", {len(m.hset)} holes" if m.hset else ''),
         coloraxis=dict(colorscale=a.cmap, cmin=lo, cmax=hi, colorbar=cbar),
-        scene=dict(xaxis=dict(title='distance from membrane, ILAY (mm)', range=[-1.5, zs[-1] + 1.5]),
-                   yaxis=dict(title='IROW (mm)'), zaxis=dict(title='ICOL (mm)'),
+        scene=dict(xaxis=dict(title='distance from membrane, ICOL (mm)', range=[-1.5, zs[-1] + 1.5]),
+                   yaxis=dict(title='IROW (mm)'), zaxis=dict(title='ILAY (mm)'),
                    aspectmode='data', camera=dict(eye=dict(x=1.7, y=-1.7, z=1.0))),
         updatemenus=[dict(type='buttons', direction='left', x=0.02, y=0.0, xanchor='left', yanchor='top', pad=dict(t=60),
                           buttons=[play, pause])],

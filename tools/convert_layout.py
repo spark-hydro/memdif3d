@@ -1,31 +1,32 @@
 #!/usr/bin/env python3
-"""Convert a memdif3d input set from the old axis layout (NX NY NZ; arrays IZ fastest, then IX, then IY;
-cell ids "ix iy iz") to the MODFLOW layout (NLAY NROW NCOL; arrays ICOL fastest, then IROW, then ILAY;
-cell ids "ilay irow icol").
+"""Convert a memdif3d input set from the old axis names (NX NY NZ; cell ids "ix iy iz"; one "# IY" tile per
+slice) to the MODFLOW names (NLAY NROW NCOL; cell ids "ilay irow icol"; one "# ILAY" tile per layer).
 
     python3 convert_layout.py OLD_DIR NEW_DIR
 
-Mapping: IX -> IROW, IY -> ICOL, IZ -> ILAY (IZ = 1 touches the membrane, so ILAY = 1 does). Directions
-+X -X +Y -Y +Z -Z become +ROW -ROW +COL -COL +LAY -LAY. Values are copied as text, so nothing is rounded.
-Face lines ("ix iy" = "irow icol") keep their order. Restart files of old runs cannot be used afterwards.
+Mapping: IY (slices) -> ILAY, IX (rows) -> IROW, IZ (away from the source) -> ICOL, so the membrane is
+touched at ICOL = 1. The array order is unchanged (IZ fastest, then IX, then IY = ICOL, IROW, ILAY), so
+every tile keeps its look: rows are IROW, values across are ICOL. Cell ids are reordered to "ilay irow icol"
+and a face "ix iy" becomes "ilay irow". Directions +X -X +Y -Y +Z -Z become +ROW -ROW +LAY -LAY +COL -COL.
+Values are copied as text, so nothing is rounded. Restart files of old runs cannot be used afterwards.
 """
 import os
 import re
 import shutil
 import sys
 
-DIRS = {'+X': '+ROW', '-X': '-ROW', '+Y': '+COL', '-Y': '-COL', '+Z': '+LAY', '-Z': '-LAY'}
+DIRS = {'+X': '+ROW', '-X': '-ROW', '+Y': '+LAY', '-Y': '-LAY', '+Z': '+COL', '-Z': '-COL'}
 COMMENTS = {
     '# Array order: IZ fastest, then IX, then IY. IZ = 1 touches the membrane.':
-        '# Array order: ICOL fastest, then IROW, then ILAY (MODFLOW order). ILAY = 1 touches the membrane.',
+        '# Array order: ICOL fastest, then IROW, then ILAY (MODFLOW order). ICOL = 1 touches the membrane.',
     '# Upwind term VELOCITY * (C(IX+1) - C) where ADVMASK = 1. VELOCITY is per time step.':
         '# Upwind term VELOCITY * (C(IROW+1) - C) where ADVMASK = 1. VELOCITY is per time step.',
     '#   COPY  = factor * new value of the cell (sx sy sz)      FIXED = constant':
         '#   cell ids are: ilay irow icol.   COPY = factor * new value of the cell (slay srow scol)   FIXED = constant',
     '#   default: the 6 face neighbours that are not solid; IZ = 1 under a source face looks at the source.':
-        '#   default: the 6 face neighbours that are not solid; ILAY = 1 under a source face looks at the source.',
+        '#   default: the 6 face neighbours that are not solid; ICOL = 1 under a source face looks at the source.',
     '# One fully mixed source cell. Its faces touch IZ = 1 of the listed (IX, IY) columns.':
-        '# One fully mixed source cell. Its faces touch ILAY = 1 of the listed (IROW, ICOL) cells.',
+        '# One fully mixed source cell. Its faces touch ICOL = 1 of the listed (ILAY, IROW) cells.',
 }
 
 
@@ -44,12 +45,13 @@ def array_block(lines, nx, ny, nz):
         vals.extend(s.split())
     if len(vals) != nx * ny * nz:
         sys.exit(f'array {key}: {len(vals)} values, expected {nx * ny * nz}')
-    old = lambda x, y, z: vals[z + nz * (x + nx * y)]            # 0-based, IZ fastest, then IX, then IY   # noqa: E731
     out = [f'  {key}', '    INTERNAL']
-    for il in range(nz):
-        out.append(f'    # ILAY {il + 1}  (rows IROW 1..{nx}, columns ICOL 1..{ny})')
+    k = 0
+    for il in range(ny):                                          # old IY = ILAY; the value order stays
+        out.append(f'    # ILAY {il + 1}  (rows IROW 1..{nx}, columns ICOL 1..{nz})')
         for ir in range(nx):
-            out.append('    ' + ' '.join(old(ir, ic, il) for ic in range(ny)))
+            out.append('    ' + ' '.join(vals[k:k + nz]))
+            k += nz
     return out
 
 
@@ -83,15 +85,15 @@ def convert_bnd(text):
             w = s.split()
             x, y, z = w[:3]
             if w[3].upper() == 'FIXED':
-                ln = f'  {z} {x} {y} FIXED {w[4]}'
+                ln = f'  {y} {x} {z} FIXED {w[4]}'
             else:
-                ln = f'  {z} {x} {y} COPY {w[6]} {w[4]} {w[5]} {w[7]}'
+                ln = f'  {y} {x} {z} COPY {w[5]} {w[4]} {w[6]} {w[7]}'
         elif s and not s.startswith('#') and mode == 'neighbor_overrides':
             w = s.split()
             x, y, z, d = w[:4]
-            ln = f'  {z} {x} {y} {DIRS[d.upper()]} {w[4]}'
+            ln = f'  {y} {x} {z} {DIRS[d.upper()]} {w[4]}'
             if w[4].upper() == 'SET':
-                ln += f' {w[7]} {w[5]} {w[6]}'
+                ln += f' {w[6]} {w[5]} {w[7]}'
         out.append(ln)
     return '\n'.join(out)
 
@@ -106,7 +108,22 @@ def convert_oc(text):
             mode = None
         elif mode == 'probes' and re.fullmatch(r'\d+\s+\d+\s+\d+', s):
             x, y, z = s.split()
-            ln = f'  {z} {x} {y}'
+            ln = f'  {y} {x} {z}'
+        out.append(ln)
+    return '\n'.join(out)
+
+
+def convert_src(text):
+    out, mode = [], None
+    for ln in text.split('\n'):
+        s = ln.strip()
+        if s.startswith('BEGIN '):
+            mode = s.split()[1]
+        elif s.startswith('END '):
+            mode = None
+        elif mode == 'faces' and s and not s.startswith('#'):
+            w = s.split()
+            ln = '  ' + ' '.join([w[1], w[0]] + w[2:])
         out.append(ln)
     return '\n'.join(out)
 
@@ -125,14 +142,16 @@ def main():
         if ext in ('.dis', '.ic', '.adv'):
             text = convert_arrays(text, dims)
         if ext == '.dis':
-            text = re.sub(r'  NX \d+\n  NY \d+\n  NZ \d+', f'  NLAY {dims[2]}\n  NROW {dims[0]}\n  NCOL {dims[1]}', text)
+            text = re.sub(r'  NX \d+\n  NY \d+\n  NZ \d+', f'  NLAY {dims[1]}\n  NROW {dims[0]}\n  NCOL {dims[2]}', text)
         if ext == '.bnd':
             text = convert_bnd(text)
         if ext == '.oc':
             text = convert_oc(text)
+        if ext == '.src':
+            text = convert_src(text)
         text = '\n'.join(COMMENTS.get(l, l) for l in text.split('\n'))
         open(path, 'w').write(text)
-    print(f'converted {old} -> {new}: NLAY {dims[2]} NROW {dims[0]} NCOL {dims[1]}')
+    print(f'converted {old} -> {new}: NLAY {dims[1]} NROW {dims[0]} NCOL {dims[2]}')
 
 
 if __name__ == '__main__':

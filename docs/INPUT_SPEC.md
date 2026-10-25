@@ -6,8 +6,8 @@ memdif3d reads plain-text packages in the style of MODFLOW 6. The spreadsheet is
 - Run: `memdif3d <namefile>`. All package paths in the name file are relative to the name file.
 - `#` starts a comment. Blank lines are ignored. Keywords are case-insensitive.
 - Blocks: `BEGIN name` ... `END name`.
-- **MODFLOW layout, indices are 1-based**: `ILAY` = 1..NLAY (layers, away from the source), `IROW` = 1..NROW (rows), `ICOL` = 1..NCOL (columns). `ILAY = 1` is the layer that touches the membrane. Compared with MODEL_SPEC.md: `IROW = X`, `ICOL = Y + 1`, `ILAY = Z + 1`. A cell id on a line is written in MODFLOW 6 order, `ilay irow icol`; a face is `irow icol`.
-- **Arrays** (`IDOMAIN`, `STRT`, `ADVMASK`): the array name, then `INTERNAL`, then NLAY*NROW*NCOL numbers in free format, `ICOL` fastest, then `IROW`, then `ILAY` (the MODFLOW order). The generator writes one line per `IROW` and a comment per `ILAY`, so every layer is a plan view (rows down, columns across).
+- **MODFLOW names, indices are 1-based**: `ILAY` = 1..NLAY (layers), `IROW` = 1..NROW (rows), `ICOL` = 1..NCOL (columns). Compared with MODEL_SPEC.md: `ILAY = Y + 1` (the slices), `IROW = X` (the rows), `ICOL = Z + 1` (away from the source). `ICOL = 1` is the cell that touches the membrane. A layer is the plan view from the top: rows down, columns across (one tile of the spreadsheet). A cell id on a line is written in MODFLOW 6 order, `ilay irow icol`; a face is `ilay irow` (the cell at `ICOL = 1` under it).
+- **Arrays** (`IDOMAIN`, `STRT`, `ADVMASK`): the array name, then `INTERNAL`, then NLAY*NROW*NCOL numbers in free format, `ICOL` fastest, then `IROW`, then `ILAY` (the MODFLOW order). The generator writes one line per `IROW` and a comment per `ILAY`, so every layer is a tile with the rows down and `ICOL` across.
 - Units: length mm, time minutes. Coefficients are per time step.
 
 ## Name file `*.nam`
@@ -42,7 +42,7 @@ Blocks `sand` and `membrane`, each with `DIFFUSION`, `TORTUOSITY`, `POROSITY`, `
 `BEGIN options` with `POROSITY`, `BULK_DENSITY`, `KD`: `R = POROSITY + BULK_DENSITY * KD`. The coefficients used in the update are `ks = K_sand / R` and `km = K_membrane / R`. (The source-cell update uses `K_membrane` without `R`, see MODEL_SPEC.md section 4.)
 
 ## SRC (the fully mixed source cell)
-`BEGIN source` with `VOLUME` and `START_CONC`. `BEGIN faces`: one `IROW ICOL [TYPE]` line per face of the source; each face touches the cell at `ILAY = 1` under it. `TYPE` is optional:
+`BEGIN source` with `VOLUME` and `START_CONC`. `BEGIN faces`: one `ILAY IROW [TYPE]` line per face of the source; each face touches the cell at `ICOL = 1` under it. `TYPE` is optional:
 - `MEMBRANE` (default): transfer through the membrane, coefficient `K_membrane`.
 - `HOLE`: no membrane at this face. The source touches the sand directly, with the sand coefficient `K_sand` (the source-cell update uses `K_sand` for it, without `R`, like `K_membrane` for the membrane).
 - `CLOSED`: impermeable face (no transfer, like a wall).
@@ -63,7 +63,7 @@ BEGIN neighbor_overrides
   ilay irow icol DIR SET tlay trow tcol    # neighbour is cell (tlay trow tcol) instead of the default
 END neighbor_overrides
 ```
-`DIR` is one of `+ROW -ROW +COL -COL +LAY -LAY`. **Default neighbours** of a fluid cell: the six face neighbours that are not solid; the `-LAY` neighbour of an `ILAY = 1` cell under a source face is the source. `FIXED` lines come first in the file so that `COPY` lines can read them. The list `neighbor_overrides` is how the two spreadsheet irregularities (MODEL_SPEC.md section 6) are carried: delete those lines to follow the intended pattern instead.
+`DIR` is one of `+ROW -ROW +LAY -LAY +COL -COL`. **Default neighbours** of a fluid cell: the six face neighbours that are not solid; the `-COL` neighbour of an `ICOL = 1` cell under a source face is the source. `FIXED` lines come first in the file so that `COPY` lines can read them. The list `neighbor_overrides` is how the two spreadsheet irregularities (MODEL_SPEC.md section 6) are carried: delete those lines to follow the intended pattern instead.
 
 ## OC (output control)
 ```
@@ -75,7 +75,7 @@ BEGIN options
 END options
 BEGIN probes        # SOURCE, or "ilay irow icol"; written every time step
   SOURCE
-  1 22 15
+  15 22 1
 END probes
 ```
 All three outputs are optional. File names are relative to the directory the program is started from. `{period}` in a name is replaced by the period (day) number, zero padded to 3 digits.

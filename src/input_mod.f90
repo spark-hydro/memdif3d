@@ -12,7 +12,7 @@ module input_mod
 
   type :: model_t
     character(len=256) :: title = ''
-    integer :: nrow = 0, ncol = 0, nlay = 0, ntot = 0
+    integer :: nrow = 0, nlay = 0, ncol = 0, ntot = 0
     ! time
     real(dp) :: step_len = 1.0_dp
     integer :: steps_per_period = 0, nperiods = 0
@@ -36,7 +36,7 @@ module input_mod
     integer, allocatable :: face(:), fkind(:)
     ! probes: ijk(:, n) = 0 0 0 means the source cell
     integer :: nprobe = 0
-    integer, allocatable :: probe_ijk(:, :)                ! (row, col, lay); 0 0 0 = source
+    integer, allocatable :: probe_ijk(:, :)                ! (lay, row, col); 0 0 0 = source
     ! output control
     logical :: has_field = .false., has_probes = .false., has_restart = .false., has_snap = .false.
     character(len=256) :: field_out = '', probes_out = '', restart_out = '', snap_out = ''
@@ -53,9 +53,9 @@ contains
     error stop 1
   end subroutine fatal
 
-  pure integer function lin(m, ir, ic, il)
+  pure integer function lin(m, il, ir, ic)
     type(model_t), intent(in) :: m
-    integer, intent(in) :: ir, ic, il
+    integer, intent(in) :: il, ir, ic
     lin = ic + m%ncol * ((ir - 1) + m%nrow * (il - 1))
   end function lin
 
@@ -280,10 +280,10 @@ contains
     select case (lower(s))
     case ('+row'); dir_index = 1
     case ('-row'); dir_index = 2
-    case ('+col'); dir_index = 3
-    case ('-col'); dir_index = 4
-    case ('+lay'); dir_index = 5
-    case ('-lay'); dir_index = 6
+    case ('+lay'); dir_index = 3
+    case ('-lay'); dir_index = 4
+    case ('+col'); dir_index = 5
+    case ('-col'); dir_index = 6
     case default
       dir_index = 0
       call fatal('bad direction ' // trim(s) // ' in ' // trim(file))
@@ -318,7 +318,7 @@ contains
     real(dp), allocatable :: buf(:), advmask(:)
     integer, allocatable :: idom(:), kmap(:)
     integer, allocatable :: isface(:, :)           ! 0 none, 1 membrane, 2 hole, 3 closed
-    integer :: nn, nt, i0, i1, i, k, p, d, ir, ic, il, jr, jc, jl, ios, tr, tc, tl, ip
+    integer :: nn, nt, i0, i1, i, k, p, d, ir, il, ic, jr, jl, jc, ios, tr, tl, tc, ip
     real(dp) :: dsand(4), dmem(4), por, rho, kd, rr, ksand, kmem
     logical :: found
 
@@ -346,9 +346,9 @@ contains
     call read_lines(f, t, nt)
     call need_block(t, nt, 'dimensions', f, i0, i1)
     m%nrow = get_int(t, i0, i1, 'nrow', f)
-    m%ncol = get_int(t, i0, i1, 'ncol', f)
     m%nlay = get_int(t, i0, i1, 'nlay', f)
-    m%ntot = m%nrow * m%ncol * m%nlay
+    m%ncol = get_int(t, i0, i1, 'ncol', f)
+    m%ntot = m%nrow * m%nlay * m%ncol
     allocate (buf(m%ntot), idom(m%ntot), advmask(m%ntot))
     call need_block(t, nt, 'griddata', f, i0, i1)
     call read_array(t, i0, i1, 'idomain', f, buf)
@@ -394,31 +394,31 @@ contains
     m%vol = get_real(t, i0, i1, 'volume', f)
     m%cm0 = get_real(t, i0, i1, 'start_conc', f)
     call need_block(t, nt, 'faces', f, i0, i1)
-    allocate (m%face(i1 - i0 + 1), m%fkind(i1 - i0 + 1), isface(m%nrow, m%ncol))
+    allocate (m%face(i1 - i0 + 1), m%fkind(i1 - i0 + 1), isface(m%nrow, m%nlay))
     isface = 0
     m%nfaces = 0
     do i = i0, i1
-      read (t(i)%s, *, iostat=ios) ir, ic
+      read (t(i)%s, *, iostat=ios) il, ir
       if (ios /= 0) call fatal('bad face line in ' // trim(f))
-      if (ir < 1 .or. ir > m%nrow .or. ic < 1 .or. ic > m%ncol) call fatal('face outside the grid in ' // trim(f))
-      if (isface(ir, ic) /= 0) call fatal('face listed twice in ' // trim(f))
+      if (ir < 1 .or. ir > m%nrow .or. il < 1 .or. il > m%nlay) call fatal('face outside the grid in ' // trim(f))
+      if (isface(ir, il) /= 0) call fatal('face listed twice in ' // trim(f))
       w = lower(word(t(i)%s, 3))
       select case (w)
       case ('', 'membrane')
-        isface(ir, ic) = 1
+        isface(ir, il) = 1
       case ('hole')
-        isface(ir, ic) = 2
+        isface(ir, il) = 2
         m%nholes = m%nholes + 1
       case ('closed')
-        isface(ir, ic) = 3
+        isface(ir, il) = 3
         m%nclosed = m%nclosed + 1
       case default
         call fatal('face type must be MEMBRANE, HOLE or CLOSED in ' // trim(f))
       end select
-      if (isface(ir, ic) /= 3) then
+      if (isface(ir, il) /= 3) then
         m%nfaces = m%nfaces + 1
-        m%face(m%nfaces) = lin(m, ir, ic, 1)
-        m%fkind(m%nfaces) = isface(ir, ic)
+        m%face(m%nfaces) = lin(m, il, ir, 1)
+        m%fkind(m%nfaces) = isface(ir, il)
       end if
     end do
 
@@ -435,29 +435,29 @@ contains
     allocate (m%fcell(m%nf), m%nb(6, m%nf), m%advnb(m%nf), kmap(m%ntot))
     kmap = 0
     k = 0
-    do ic = 1, m%ncol
+    do il = 1, m%nlay
       do ir = 1, m%nrow
-        do il = 1, m%nlay
-          p = lin(m, ir, ic, il)
+        do ic = 1, m%ncol
+          p = lin(m, il, ir, ic)
           if (idom(p) /= 1) cycle
           k = k + 1
           m%fcell(k) = p
           kmap(p) = k
           do d = 1, 6
             m%nb(d, k) = 0
-            if (d == 6 .and. il == 1 .and. isface(ir, ic) > 0) then
-              if (isface(ir, ic) == 1) m%nb(d, k) = -1
-              if (isface(ir, ic) == 2) m%nb(d, k) = -2
+            if (d == 6 .and. ic == 1 .and. isface(ir, il) > 0) then
+              if (isface(ir, il) == 1) m%nb(d, k) = -1
+              if (isface(ir, il) == 2) m%nb(d, k) = -2
               cycle                                   ! closed face: no neighbour
             end if
             jr = ir + DXYZ(1, d)
-            jc = ic + DXYZ(2, d)
-            jl = il + DXYZ(3, d)
-            if (jr < 1 .or. jr > m%nrow .or. jc < 1 .or. jc > m%ncol .or. jl < 1 .or. jl > m%nlay) cycle
-            if (idom(lin(m, jr, jc, jl)) /= 0) m%nb(d, k) = lin(m, jr, jc, jl)
+            jl = il + DXYZ(2, d)
+            jc = ic + DXYZ(3, d)
+            if (jr < 1 .or. jr > m%nrow .or. jl < 1 .or. jl > m%nlay .or. jc < 1 .or. jc > m%ncol) cycle
+            if (idom(lin(m, jl, jr, jc)) /= 0) m%nb(d, k) = lin(m, jl, jr, jc)
           end do
           m%advnb(k) = 0
-          if (advmask(p) > 0.5_dp .and. ir < m%nrow) m%advnb(k) = lin(m, ir + 1, ic, il)
+          if (advmask(p) > 0.5_dp .and. ir < m%nrow) m%advnb(k) = lin(m, il, ir + 1, ic)
         end do
       end do
     end do
@@ -473,7 +473,7 @@ contains
       read (t(i)%s, *, iostat=ios) il, ir, ic
       if (ios /= 0) call fatal('bad ghost line in ' // trim(f))
       ip = i - i0 + 1
-      m%gcell(ip) = lin(m, ir, ic, il)
+      m%gcell(ip) = lin(m, il, ir, ic)
       if (w == 'fixed') then
         m%gsrc(ip) = 0
         m%gfac(ip) = to_real(word(t(i)%s, 5), ios)
@@ -481,7 +481,7 @@ contains
         tl = to_int(word(t(i)%s, 5), ios)
         tr = to_int(word(t(i)%s, 6), ios)
         tc = to_int(word(t(i)%s, 7), ios)
-        m%gsrc(ip) = lin(m, tr, tc, tl)
+        m%gsrc(ip) = lin(m, tl, tr, tc)
         m%gfac(ip) = to_real(word(t(i)%s, 8), ios)
       else
         call fatal('ghost type must be COPY or FIXED in ' // trim(f))
@@ -495,7 +495,7 @@ contains
       read (t(i)%s, *, iostat=ios) il, ir, ic
       if (ios /= 0) call fatal('bad override line in ' // trim(f))
       d = dir_index(word(t(i)%s, 4), f)
-      k = kmap(lin(m, ir, ic, il))
+      k = kmap(lin(m, il, ir, ic))
       if (k == 0) call fatal('neighbor override on a cell that is not a fluid cell')
       w = lower(word(t(i)%s, 5))
       select case (w)
@@ -508,9 +508,9 @@ contains
         tr = to_int(word(t(i)%s, 7), ios)
         tc = to_int(word(t(i)%s, 8), ios)
         if (ios /= 0) call fatal('bad override line in ' // trim(f))
-        if (tr < 1 .or. tr > m%nrow .or. tc < 1 .or. tc > m%ncol .or. tl < 1 .or. tl > m%nlay) &
+        if (tr < 1 .or. tr > m%nrow .or. tl < 1 .or. tl > m%nlay .or. tc < 1 .or. tc > m%ncol) &
           call fatal('override target outside the grid')
-        m%nb(d, k) = lin(m, tr, tc, tl)
+        m%nb(d, k) = lin(m, tl, tr, tc)
       case default
         call fatal('override kind must be OMIT, SOURCE or SET')
       end select
@@ -555,9 +555,9 @@ contains
           else
             read (t(i)%s, *, iostat=ios) il, ir, ic
             if (ios /= 0) call fatal('bad probe line in ' // trim(f))
-            if (ir < 1 .or. ir > m%nrow .or. ic < 1 .or. ic > m%ncol .or. il < 1 .or. il > m%nlay) &
+            if (ir < 1 .or. ir > m%nrow .or. il < 1 .or. il > m%nlay .or. ic < 1 .or. ic > m%ncol) &
               call fatal('probe outside the grid')
-            m%probe_ijk(:, ip) = [ir, ic, il]
+            m%probe_ijk(:, ip) = [il, ir, ic]
           end if
         end do
       end if

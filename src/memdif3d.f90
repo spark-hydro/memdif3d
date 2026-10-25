@@ -17,7 +17,7 @@ program memdif3d
   integer :: nargs, i, ip, is, cur, ip0, gstep, step0, pu, ios, c0, c1, rate, ovr_np, ovr_spp, ovr_snap
   logical :: fresh, per_period, pok, force
   real(dp) :: smax, ssrc
-  integer :: worst, wl, wr, wc
+  integer :: worst, wc, wr, wl
   character(len=:), allocatable :: pfile
 
   nargs = command_argument_count()

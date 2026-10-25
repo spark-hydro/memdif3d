@@ -3,7 +3,7 @@
 
   python3 tools/make_holes.py data/reduced_matrix data/holes_p3 --pitch 3 --size 1 [--offset 1] [--closed]
 
-The membrane faces of SRC are laid out as a grid; every PITCH-th face in both directions (starting
+The membrane faces of SRC (lines "ilay irow") are laid out as a grid; every PITCH-th face in both directions (starting
 at OFFSET) opens a square hole of SIZE x SIZE faces. A hole connects the source straight to the
 sand (sand coefficient, no membrane). With --closed the rest of the membrane is impermeable, so
 only the holes transmit; without it the membrane stays as it is. For 15 faces, pitch 3, offset 1
@@ -34,7 +34,7 @@ def main():
     lines = open(path).read().splitlines()
     i0 = lines.index('BEGIN faces') + 1
     i1 = lines.index('END faces')
-    faces = [tuple(int(t) for t in l.split()[:2]) for l in lines[i0:i1] if l.strip() and not l.startswith('#')]
+    faces = [tuple(int(t) for t in l.split()[:2][::-1]) for l in lines[i0:i1] if l.strip() and not l.startswith('#')]   # file: ilay irow -> (x, y) = (irow, ilay)
     x0, y0 = min(f[0] for f in faces), min(f[1] for f in faces)
 
     def is_hole(x, y):
@@ -45,13 +45,13 @@ def main():
     nh = nc = 0
     for x, y in faces:
         if is_hole(x, y):
-            out.append(f'  {x} {y} HOLE')
+            out.append(f'  {y} {x} HOLE')
             nh += 1
         elif a.closed:
-            out.append(f'  {x} {y} CLOSED')
+            out.append(f'  {y} {x} CLOSED')
             nc += 1
         else:
-            out.append(f'  {x} {y}')
+            out.append(f'  {y} {x}')
     lines[i0:i1] = out
     open(path, 'w').write('\n'.join(lines) + '\n')
     nam = [f for f in os.listdir(a.out_dir) if f.endswith('.nam')][0]

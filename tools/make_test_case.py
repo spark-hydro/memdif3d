@@ -79,10 +79,10 @@ def build(case, diffusion):
 
     def arr(name, f, fmt):
         lines = [f'  {name}', '    INTERNAL']
-        for z in range(1, nz + 1):
-            lines.append(f'    # ILAY {z}')
+        for y in range(1, ny + 1):
+            lines.append(f'    # ILAY {y}')
             for x in range(1, nx + 1):
-                lines.append('    ' + ' '.join(fmt(f((x, y, z))) for y in range(1, ny + 1)))
+                lines.append('    ' + ' '.join(fmt(f((x, y, z))) for z in range(1, nz + 1)))
         return '\n'.join(lines) + '\n'
 
     def ic(p):
@@ -100,27 +100,27 @@ def build(case, diffusion):
                       '  ADV t.adv\n  BND t.bnd\n  OC t.oc\nEND packages\n')
     files['t.tdis'] = (f'BEGIN options\n  TIME_UNITS minutes\nEND options\nBEGIN timing\n  STEP_LENGTH {step_len}\n'
                        f'  STEPS_PER_PERIOD {spp}\n  NPERIODS {nper}\nEND timing\n')
-    files['t.dis'] = (f'BEGIN dimensions\n  NLAY {nz}\n  NROW {nx}\n  NCOL {ny}\nEND dimensions\n'
+    files['t.dis'] = (f'BEGIN dimensions\n  NLAY {ny}\n  NROW {nx}\n  NCOL {nz}\nEND dimensions\n'
                       f'BEGIN griddata\n{arr("IDOMAIN", lambda p: code[p], str)}END griddata\n')
     files['t.ic'] = f'BEGIN griddata\n{arr("STRT", ic, repr)}END griddata\n'
     files['t.dsp'] = (''.join(f'BEGIN {n}\n  DIFFUSION {d["D"]!r}\n  TORTUOSITY {d["t"]!r}\n  POROSITY {d["ph"]!r}\n'
                               f'  LENGTH {d["l"]!r}\nEND {n}\n' for n, d in (('sand', sand), ('membrane', memb))))
     files['t.mst'] = f'BEGIN options\n  POROSITY {por!r}\n  BULK_DENSITY {rho!r}\n  KD {kd!r}\nEND options\n'
     files['t.src'] = (f'BEGIN source\n  VOLUME {vol!r}\n  START_CONC {cm0!r}\nEND source\nBEGIN faces\n' +
-                      ''.join(f'  {x} {y}\n' for x, y in sorted(faces, key=lambda q: (q[1], q[0]))) + 'END faces\n')
+                      ''.join(f'  {y} {x}\n' for x, y in sorted(faces, key=lambda q: (q[1], q[0]))) + 'END faces\n')
     files['t.adv'] = (f'BEGIN options\n  VELOCITY {vel!r}\nEND options\nBEGIN griddata\n'
                       f'{arr("ADVMASK", lambda p: adv[p], str)}END griddata\n')
     gl = []
     for p in order:
         kind, src, val = ghosts[p]
-        gl.append(f'  {p[2]} {p[0]} {p[1]} FIXED {val!r}' if kind == 'FIXED'
-                  else f'  {p[2]} {p[0]} {p[1]} COPY {src[2]} {src[0]} {src[1]} {val!r}')
+        gl.append(f'  {p[1]} {p[0]} {p[2]} FIXED {val!r}' if kind == 'FIXED'
+                  else f'  {p[1]} {p[0]} {p[2]} COPY {src[1]} {src[0]} {src[2]} {val!r}')
     ov = []
     if case == 'open':                     # two exceptions: skip a cell in +Y, and cut a link in -X
-        ov = ['  6 4 8 +COL SET 6 4 10', '  8 9 5 -ROW OMIT']
+        ov = ['  8 4 6 +LAY SET 10 4 6', '  5 9 8 -ROW OMIT']
     files['t.bnd'] = ('BEGIN ghosts\n' + '\n'.join(gl) + ('\n' if gl else '') + 'END ghosts\n'
                       'BEGIN neighbor_overrides\n' + '\n'.join(ov) + ('\n' if ov else '') + 'END neighbor_overrides\n')
-    probes = '1 8 5\n  5 8 5' if case == 'open' else '1 4 3\n  4 4 3'
+    probes = '5 8 1\n  5 8 5' if case == 'open' else '3 4 1\n  3 4 4'
     files['t.oc'] = ('BEGIN options\n  DAILY_FIELD FILEOUT field_{period}.csv\n  PROBES FILEOUT probes_{period}.csv\n'
                      '  RESTART FILEOUT restart.dat\nEND options\nBEGIN probes\n  SOURCE\n  ' + probes + '\nEND probes\n')
     info = dict(nfluid=nfluid, vol=vol, cm0=cm0, retardation=por + rho * kd, nx=nx, ny=ny, nz=nz)

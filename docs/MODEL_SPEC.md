@@ -3,7 +3,7 @@
 Extracted from the formulas in `Reduced_Matrix.xlsx` (block 2, rows 50:92, which is "time t+1 from time t = rows 6:48").
 **Validated:** the rule set below, including the two spreadsheet quirks in section 6, reproduces every formula cell of the sheet on a random concentration field to rounding error (max abs difference 2e-16 over 28,109 fluid cells, plus the source cell). Scripts are in `tools/`.
 
-**MODFLOW names for the same axes:** X = row (IROW), Y = column (ICOL = Y + 1), Z = layer (ILAY = Z + 1); the input files use the MODFLOW names and order (docs/INPUT_SPEC.md). The rest of this note keeps the X, Y, Z names of the recording.
+**MODFLOW names for the same axes:** X = row (IROW = X), Y = layer (ILAY = Y + 1, the slices), Z = column (ICOL = Z + 1, away from the source); the input files use these names (docs/INPUT_SPEC.md). The rest of this note keeps the X, Y, Z names of the recording.
 
 **Axis naming follows the voice recording:** each slice is an XZ plane, Z points away from the source cell through the membrane, and the stack of slices is Y.
 

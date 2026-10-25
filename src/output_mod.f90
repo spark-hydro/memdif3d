@@ -54,7 +54,7 @@ contains
     real(dp), intent(in) :: c(:), cm
     integer, intent(in) :: period, step
     character(len=*), intent(in) :: path
-    integer :: u, ios, ir, ic, il
+    integer :: u, ios, ir, il, ic
     open (newunit=u, file=path, status='replace', action='write', iostat=ios)
     if (ios /= 0) then
       write (*, '(a)') 'memdif3d: warning: cannot write ' // trim(path)
@@ -65,7 +65,7 @@ contains
     do il = 1, m%nlay
       write (u, '(a,i0)') '# ILAY ', il
       do ir = 1, m%nrow
-        write (u, '(*(es23.15e3,:,","))') (c(lin(m, ir, ic, il)), ic=1, m%ncol)
+        write (u, '(*(es23.15e3,:,","))') (c(lin(m, il, ir, ic)), ic=1, m%ncol)
       end do
     end do
     close (u)
@@ -81,7 +81,7 @@ contains
       if (m%probe_ijk(1, i) == 0) then
         lab = 'SOURCE'
       else
-        write (lab, '(i0,a,i0,a,i0)') m%probe_ijk(3, i), '_', m%probe_ijk(1, i), '_', m%probe_ijk(2, i)
+        write (lab, '(i0,a,i0,a,i0)') m%probe_ijk(1, i), '_', m%probe_ijk(2, i), '_', m%probe_ijk(3, i)
       end if
       line = trim(line) // ',' // trim(lab)
     end do

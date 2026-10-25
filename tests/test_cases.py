@@ -77,7 +77,7 @@ with tempfile.TemporaryDirectory() as d1, tempfile.TemporaryDirectory() as r1:
         if i + 1 == 20:
             C20, CM20 = dict(C), CM
     cmf, vals = field(os.path.join(r1, f'field_{nper:03d}.csv'))
-    order = [(x, iy, iz) for iz in range(1, m.nz + 1) for x in range(1, m.nx + 1) for iy in range(1, m.ny + 1)]
+    order = [(x, iy, iz) for iy in range(1, m.ny + 1) for x in range(1, m.nx + 1) for iz in range(1, m.nz + 1)]
     worst = max(abs(a - C[p]) for a, p in zip(vals, order))
     print(f'open: {m.nx}x{m.ny}x{m.nz}, fluid {len(m.fluid)}, field vs prototype {worst:.2e}, CM diff {abs(cmf - CM):.2e}')
     if len(vals) != len(order) or worst > 1e-12 or abs(cmf - CM) > 1e-12:
@@ -107,8 +107,8 @@ with tempfile.TemporaryDirectory() as d2, tempfile.TemporaryDirectory() as r2:
     nam, info = make('closed', d2)
     run(nam, r2)
     m = P.Model(nam)
-    fluid = [k for k, p in enumerate((x, iy, iz) for iz in range(1, m.nz + 1) for x in range(1, m.nx + 1)
-                                    for iy in range(1, m.ny + 1)) if m.idom[p] == 1]
+    fluid = [k for k, p in enumerate((x, iy, iz) for iy in range(1, m.ny + 1) for x in range(1, m.nx + 1)
+                                    for iz in range(1, m.nz + 1)) if m.idom[p] == 1]
     R = info['retardation']
     mass0 = info['vol'] * info['cm0']
     drift = 0.0
@@ -130,8 +130,8 @@ def tag_faces(nam, kinds):
     out = []
     for line in open(f):
         w = line.split()
-        if len(w) == 2 and w[0].isdigit() and (int(w[0]), int(w[1])) in kinds:
-            line = f'  {w[0]} {w[1]} {kinds[(int(w[0]), int(w[1]))]}\n'
+        if len(w) == 2 and w[0].isdigit() and (int(w[1]), int(w[0])) in kinds:      # file: ilay irow
+            line = f'  {w[0]} {w[1]} {kinds[(int(w[1]), int(w[0]))]}\n'
         out.append(line)
     open(f, 'w').write(''.join(out))
 
@@ -148,7 +148,7 @@ with tempfile.TemporaryDirectory() as d4, tempfile.TemporaryDirectory() as r4:
     for i in range(45):
         C, CM = m.step(C, CM)
     cmf, vals = field(os.path.join(r4, 'field_003.csv'))
-    order = [(x, iy, iz) for iz in range(1, m.nz + 1) for x in range(1, m.nx + 1) for iy in range(1, m.ny + 1)]
+    order = [(x, iy, iz) for iy in range(1, m.ny + 1) for x in range(1, m.nx + 1) for iz in range(1, m.nz + 1)]
     worst = max(abs(a - C[p]) for a, p in zip(vals, order))
     print(f'holes: 3 holes, 2 closed faces, field vs prototype {worst:.2e}, CM diff {abs(cmf - CM):.2e}')
     if worst > 1e-12 or abs(cmf - CM) > 1e-12:
@@ -162,8 +162,8 @@ with tempfile.TemporaryDirectory() as d5, tempfile.TemporaryDirectory() as r5:
     m = P.Model(nam)
     R = info['retardation']
     mass0 = info['vol'] * info['cm0']
-    fluid = [k for k, p in enumerate((x, iy, iz) for iz in range(1, m.nz + 1) for x in range(1, m.nx + 1)
-                                    for iy in range(1, m.ny + 1)) if m.idom[p] == 1]
+    fluid = [k for k, p in enumerate((x, iy, iz) for iy in range(1, m.ny + 1) for x in range(1, m.nx + 1)
+                                    for iz in range(1, m.nz + 1)) if m.idom[p] == 1]
     drift = 0.0
     for period in range(1, 21):
         cm, vals = field(os.path.join(r5, f'field_{period:03d}.csv'))
