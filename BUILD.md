@@ -1,5 +1,7 @@
 # Building memdif3d
 
+This page is also part of the manual: `docs/install.md`.
+
 Requirements: a Fortran 2008 compiler (gfortran 13 or newer, or Intel ifx), CMake 3.22 or newer, and make. Python 3 is only needed for the reference checks in `tools/`.
 
 ## Linux

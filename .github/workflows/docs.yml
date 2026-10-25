@@ -1,0 +1,21 @@
+name: docs
+
+# Builds the manual on every push and pull request that touches it (a broken link or page fails the build).
+# To publish: make the repository public and enable GitHub Pages, or connect it to Read the Docs
+# (.readthedocs.yaml is in place); then add a deploy step (mkdocs gh-deploy --force) for main.
+on:
+  push:
+    paths: ['docs/**', 'mkdocs.yml', 'requirements-docs.txt', '.github/workflows/docs.yml']
+  pull_request:
+    paths: ['docs/**', 'mkdocs.yml', 'requirements-docs.txt', '.github/workflows/docs.yml']
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r requirements-docs.txt
+      - run: mkdocs build --strict

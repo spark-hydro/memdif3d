@@ -4,11 +4,13 @@ Membrane diffusion in 3D: a fully mixed source cell leaks through a membrane int
 
 **Status: early development.** The solver runs the Reduced_Matrix case (28 days in about 2 s on one core) and passes its regression tests against a Python prototype of the model. It has not yet been compared with a full-length spreadsheet run. The model definition is in [docs/MODEL_SPEC.md](docs/MODEL_SPEC.md), the input files in [docs/INPUT_SPEC.md](docs/INPUT_SPEC.md).
 
+**Manual:** the pages in `docs/` form a manual (quick start, theory, input and output files, how to build your own model, tools, validation). Build it with `pip install -r requirements-docs.txt && mkdocs serve`, see [docs/install.md](docs/install.md).
+
 ## Layout
 | Folder | Content |
 |---|---|
 | `src/` | Fortran source |
-| `docs/` | model specification (`MODEL_SPEC.md`) and input file formats (`INPUT_SPEC.md`) |
+| `docs/` | the manual (MkDocs, `mkdocs.yml`): quick start, theory, input and output files, build your own model, tools, validation |
 | `excel/` | `DailyRun.bas`, VBA that runs the spreadsheet model one day at a time (used to produce reference results) |
 | `tools/` | Python: `xlsx2memdif.py` turns the spreadsheet into input files, `memdif_proto.py` is a prototype solver that reads them, `ref_step.py` and `test_vs_excel.py` check the specification |
 | `data/reduced_matrix/` | input set generated from `Reduced_Matrix.xlsx` (first test case) |
@@ -34,7 +36,7 @@ Writes `field_001.csv` ... (one per day), `probes_001.csv` ... (one row per minu
 ```
 python tools/animate_3d.py run1 --nam data/reduced_matrix/memdif3d.nam --log --out solute3d.html
 ```
-Membrane with holes: `python tools/make_holes.py data/reduced_matrix data/holes_p3 --pitch 3 --size 1` writes a new input set (faces tagged `HOLE`, see docs/INPUT_SPEC.md).
+Membrane with holes: `python tools/make_holes.py data/reduced_matrix data/holes_p3 --pitch 3 --size 1` writes a new input set (a `FACES` map with holes, see docs/INPUT_SPEC.md).
 
 `tools/animate_field.py` turns the daily field files into an animated GIF, with the face view and the side view each switched on or off:
 ```

@@ -1,0 +1,63 @@
+site_name: memdif3d
+site_description: Membrane diffusion in 3D, an explicit finite-volume model with MODFLOW-style text input
+repo_url: https://github.com/spark-hydro/memdif3d
+repo_name: spark-hydro/memdif3d
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  features:
+    - navigation.sections
+    - navigation.top
+    - navigation.footer
+    - content.code.copy
+    - search.suggest
+    - toc.follow
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.highlight
+  - pymdownx.superfences
+  - pymdownx.details
+
+extra_javascript:
+  - javascripts/mathjax.js
+  - https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js
+
+nav:
+  - Home: index.md
+  - Getting started:
+      - Quick start: quickstart.md
+      - Install and build: install.md
+  - The model:
+      - Theory: theory.md
+      - Limits and FAQ: faq.md
+      - Model specification (reference): MODEL_SPEC.md
+  - Using memdif3d:
+      - Input files: INPUT_SPEC.md
+      - Output files: outputs.md
+      - Build your own model: build-your-model.md
+      - Tools: tools.md
+  - Validation: VALIDATION.md
+  - Development:
+      - Development notes: DEVELOPMENT.md
+      - Design note, faces and boundary: DESIGN_faces_boundary.md
