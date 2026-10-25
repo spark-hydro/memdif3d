@@ -1,10 +1,14 @@
 # memdif3d
 
+[![Documentation Status](https://readthedocs.org/projects/seonggyu-park/badge/?version=latest)](https://seonggyu-park.readthedocs.io/en/latest/)
+
+**Documentation: <https://seonggyu-park.readthedocs.io/en/latest/>**
+
 Membrane diffusion in 3D: a fully mixed source cell leaks through a membrane into a porous medium, solved with an explicit finite-volume scheme on a regular grid (1 mm cells, 1 minute steps). It replaces a spreadsheet model that had to be run in pieces by hand.
 
 **Status: early development.** The solver runs the Reduced_Matrix case (28 days in about 2 s on one core) and passes its regression tests against a Python prototype of the model. It has not yet been compared with a full-length spreadsheet run. The model definition is in [docs/MODEL_SPEC.md](docs/MODEL_SPEC.md), the input files in [docs/INPUT_SPEC.md](docs/INPUT_SPEC.md).
 
-**Manual:** the pages in `docs/` form a manual (quick start, theory, input and output files, how to build your own model, tools, validation). Build it with `pip install -r requirements-docs.txt && mkdocs serve`, see [docs/install.md](docs/install.md).
+**Manual:** the online manual above is built from the pages in `docs/`, which form a manual (quick start, theory, input and output files, how to build your own model, tools, validation). Build it with `pip install -r requirements-docs.txt && mkdocs serve`, see [docs/install.md](docs/install.md).
 
 ## Layout
 | Folder | Content |
