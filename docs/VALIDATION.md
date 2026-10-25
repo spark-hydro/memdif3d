@@ -19,8 +19,19 @@ memdif3d data/reduced_matrix/memdif3d.nam --nperiods 1 --steps-per-period 576 --
 python3 tools/compare_excel_block.py 3d_nonzeroboundry.xlsx field_001.csv --first-row 50694 --nam data/reduced_matrix/memdif3d.nam
 ```
 
-## 3. Independent physics checks (tests/test_cases.py)
+## 3. VBA macro output (Day_001.xlsx, 2026-10-24)
+`excel/DailyRun.bas` was run in Excel for 10 steps (`STEPS_PER_DAY = 10`, `TOTAL_DAYS = 1`). The workbook it started from held the state of memdif3d step 1020 (the macro's source value at minute 1, 0.9111050245470296, equals memdif3d step 1021 exactly), so the Day file is compared with memdif3d after 1030 steps from the initial state:
+
+| comparison | max abs difference |
+|---|---|
+| all 31,175 cells of Day_001.xlsx | 3.3e-16 |
+| ghost cells | 2.8e-17 |
+| source value, each of the 10 minutes of the Minutes sheet | 1.1e-16 |
+
+Reproduce with `memdif3d data/reduced_matrix/memdif3d.nam --nperiods 1 --steps-per-period 1030 --fresh` and `python3 tools/compare_excel_block.py Day_001.xlsx field_001.csv --first-row 6 --nam data/reduced_matrix/memdif3d.nam`. Note: the `Reduced_Matrix.xlsm` kept next to the other Excel files holds a different, advanced state (28,251 nonzero cells, source 0.1397), not the initial one; start a clean run from `Reduced_Matrix.xlsx`.
+
+## 4. Independent physics checks (tests/test_cases.py)
 Sealed box: mass conserved to 5e-15 and the end state equals the analytic uniform concentration V*CM0 / (V + R*Nfluid). Off-centre source with sorption, advection and neighbour overrides: Fortran equals the Python prototype to 1e-16.
 
 ## Not covered
-The VBA macro output (`Day_NNN.xlsx`) has not been compared yet; sorption (Kd > 0) and advection are tested against the prototype only, not against a spreadsheet run.
+A full 1440-step VBA day from the initial state has not been compared (only the 10 steps in section 3); sorption (Kd > 0) and advection are tested against the prototype only, not against a spreadsheet run.

@@ -21,13 +21,13 @@ memdif3d simulates diffusion from a fully mixed source cell through a membrane i
 - Spreadsheet formulas == memdif3d rule on random fields (2e-16).
 - 576 steps equal the last block of 3d_nonzeroboundry.xlsx to 2.2e-16 over all cells (docs/VALIDATION.md).
 - Sealed box: mass conserved to 5e-15, analytic end state reached. Off-centre source with sorption and advection: equals the Python prototype.
-- Not yet compared: the VBA macro output (Day_NNN.xlsx, excel/DailyRun.bas), sorption and advection against a spreadsheet.
+- VBA macro (excel/DailyRun.bas): 10 steps equal memdif3d to 3e-16 (docs/VALIDATION.md section 3). Not yet compared: a full 1440-step day, sorption and advection against a spreadsheet.
 
 ## Known limits (by design, so far)
 One source cell touching ICOL = 1; one uniform sand and membrane; cubic cells; advection only toward lower IROW; explicit scheme (the program stops when the coefficient sum is above 1; `--force` overrides).
 
 ## Ideas / next steps
-- Compare a VBA day with `field_001.csv` (tools/compare_excel_block.py works on any block of a sheet).
+- Compare a full 1440-step VBA day with `field_001.csv` (tools/compare_excel_block.py works on any block of a sheet).
 - A small step-by-step interface (initialise / advance / get / set) for coupling with other models or Python.
 - Heterogeneous soil layers, other source geometries, binary output, OpenMP tuning.
 - Confirm the GitHub Actions workflows (build.yml, release.yml) after the first push; the Windows job has never run.
