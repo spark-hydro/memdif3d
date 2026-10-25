@@ -21,7 +21,7 @@ memdif3d simulates diffusion from a fully mixed source cell through a membrane i
 - Spreadsheet formulas == memdif3d rule on random fields (2e-16).
 - 576 steps equal the last block of 3d_nonzeroboundry.xlsx to 2.2e-16 over all cells (docs/VALIDATION.md).
 - Sealed box: mass conserved to 5e-15, analytic end state reached. Off-centre source with sorption and advection: equals the Python prototype.
-- VBA macro (excel/DailyRun.bas): 10 steps equal memdif3d to 3e-16 (docs/VALIDATION.md section 3). Not yet compared: a full 1440-step day, sorption and advection against a spreadsheet.
+- VBA macro (excel/DailyRun.bas): 10 steps and the 32,820-step state saved in Reduced_Matrix.xlsm equal memdif3d to 3e-16 (docs/VALIDATION.md section 3). Not yet compared: a full 1440-step day, sorption and advection against a spreadsheet.
 
 ## Known limits (by design, so far)
 One source cell touching ICOL = 1; one uniform sand and membrane; cubic cells; advection only toward lower IROW; explicit scheme (the program stops when the coefficient sum is above 1; `--force` overrides).
