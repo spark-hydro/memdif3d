@@ -40,6 +40,9 @@ cmake --build build/release
 
 The Windows build has not been run on GitHub yet.
 
+## Docker
+A container image with the model and the Python tools avoids all of this: see [Run with Docker](docker.md).
+
 ## Python environment for the tools
 ```bash
 conda env create -f environment.yml

@@ -16,11 +16,17 @@ set(MEMDIF3D_DEPARTMENT "CECE Dept." CACHE STRING "Department shown in the banne
 set(MEMDIF3D_INSTITUTION "Texas Tech University" CACHE STRING "Institution shown in the banner")
 set(MEMDIF3D_CONTACT "seonggyu.park@ttu.edu" CACHE STRING "Contact (e-mail) shown in the banner")
 
-execute_process(COMMAND git describe --tags --always --dirty
-  WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-  OUTPUT_VARIABLE BANNER_GIT_TAG OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET RESULT_VARIABLE git_rc)
-if(NOT git_rc EQUAL 0 OR NOT BANNER_GIT_TAG)
-  set(BANNER_GIT_TAG "unknown")
+# a build without a git checkout (the Docker image) passes the version in: -D MEMDIF3D_GIT_TAG=v0.1.0
+set(MEMDIF3D_GIT_TAG "" CACHE STRING "Version shown in the banner (default: git describe)")
+if(MEMDIF3D_GIT_TAG)
+  set(BANNER_GIT_TAG "${MEMDIF3D_GIT_TAG}")
+else()
+  execute_process(COMMAND git describe --tags --always --dirty
+    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+    OUTPUT_VARIABLE BANNER_GIT_TAG OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET RESULT_VARIABLE git_rc)
+  if(NOT git_rc EQUAL 0 OR NOT BANNER_GIT_TAG)
+    set(BANNER_GIT_TAG "unknown")
+  endif()
 endif()
 
 if(CMAKE_Fortran_COMPILER_ID STREQUAL "GNU")

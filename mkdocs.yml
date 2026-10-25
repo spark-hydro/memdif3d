@@ -49,6 +49,7 @@ nav:
   - Getting started:
       - Quick start: quickstart.md
       - Install and build: install.md
+      - Run with Docker: docker.md
   - The model:
       - Theory: theory.md
       - Limits and FAQ: faq.md

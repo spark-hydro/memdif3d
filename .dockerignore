@@ -1,0 +1,11 @@
+.git
+.github
+build
+site
+docs
+tests
+excel
+**/__pycache__
+*.gif
+*.pyc
+daily_output

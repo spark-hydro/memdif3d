@@ -28,6 +28,14 @@ cmake --build build/release
 ctest --test-dir build/release --output-on-failure
 ```
 
+## Docker
+A ready-made image holds the model and the Python tools, so nothing but Docker is needed:
+```
+docker pull ghcr.io/spark-hydro/memdif3d:latest
+docker run --rm --user "$(id -u):$(id -g)" -v "$PWD":/work ghcr.io/spark-hydro/memdif3d memdif3d /opt/memdif3d/data/reduced_matrix/memdif3d.nam
+```
+See [docs/docker.md](docs/docker.md). The image is published with each release.
+
 ## Run
 ```
 mkdir run1 && cd run1
