@@ -1,16 +1,20 @@
 # memdif3d in a container: the model (fast and debug builds), the example input sets and the Python tools
-# (plots, animations, converters). The image is small: the Python packages of the tools are installed the
-# first time a tool is used (see docker/entrypoint.sh).
+# (plots, animations, converters). One Dockerfile, two images:
 #
-#   docker build -t memdif3d --build-arg VERSION=$(git describe --tags --always) .
+#   full (default)  the model + the tools with numpy, matplotlib, Pillow and plotly installed. About 530 MB.
+#                   Works offline, nothing to install later. This is the one for beginners.
+#   slim            the model + the tool scripts, about 190 MB. The Python packages are installed the first time
+#                   a plotting tool is used (docker/entrypoint.sh); keep them with a volume: -v memdif3d-py:/opt/pyenv
+#
+#   docker build -t memdif3d --build-arg VERSION=$(git describe --tags --always) .                 # full
+#   docker build -t memdif3d:slim --target slim --build-arg VERSION=$(git describe --tags --always) .
 #   docker run --rm memdif3d memdif3d --version
 #
 # Run a model and make an animation, in the current folder (output files belong to you with --user):
 #   docker run --rm --user "$(id -u):$(id -g)" -v "$PWD":/work memdif3d \
 #          memdif3d /opt/memdif3d/data/reduced_matrix/memdif3d.nam
-#   docker run --rm --user "$(id -u):$(id -g)" -v "$PWD":/work -v memdif3d-py:/opt/pyenv memdif3d \
+#   docker run --rm --user "$(id -u):$(id -g)" -v "$PWD":/work memdif3d \
 #          animate_3d.py . --nam /opt/memdif3d/data/reduced_matrix/memdif3d.nam --log --out solute3d.html
-# The volume memdif3d-py keeps the installed Python packages, so they are downloaded only once (about 240 MB).
 # Your own input set: mount its folder too, e.g. -v /path/to/mycase:/mycase and use /mycase/memdif3d.nam.
 # The debug build (array bounds checks, floating-point traps) is `memdif3d-debug`.
 
@@ -31,8 +35,8 @@ RUN cmake -S . -B /build-release -G Ninja -D CMAKE_BUILD_TYPE=Release -D BUILD_T
  && cmake --build /build-debug \
  && cp /build-debug/memdif3d /memdif3d-debug
 
-# ---- stage 2: small runtime image (Python only to create the package folder on first use) ----
-FROM ubuntu:24.04
+# ---- stage 2 (target slim): small runtime image; Python only to create the package folder on first use ----
+FROM ubuntu:24.04 AS slim
 LABEL org.opencontainers.image.source="https://github.com/spark-hydro/memdif3d"
 LABEL org.opencontainers.image.description="memdif3d: membrane diffusion in 3D, with the Python tools for plots and animations"
 LABEL org.opencontainers.image.licenses="MIT"
@@ -45,7 +49,7 @@ COPY tools /opt/memdif3d/tools
 COPY data /opt/memdif3d/data
 COPY docker/requirements.txt /opt/memdif3d/requirements.txt
 COPY docker/entrypoint.sh /usr/local/bin/memdif3d-entrypoint
-# /opt/pyenv gets the Python packages on first use; it is writable for any user, and a volume mounted there keeps them
+# /opt/pyenv holds the Python packages (installed on first use in slim); it is writable for any user, and a volume mounted there keeps them
 RUN chmod +x /opt/memdif3d/tools/*.py /usr/local/bin/memdif3d-entrypoint \
  && mkdir -p /opt/pyenv /work \
  && chmod 777 /opt/pyenv /work
@@ -58,3 +62,9 @@ ENV PATH="/opt/memdif3d/tools:${PATH}" \
 WORKDIR /work
 ENTRYPOINT ["memdif3d-entrypoint"]
 CMD ["memdif3d"]
+
+# ---- stage 3 (target full, the default): slim plus the Python packages, so nothing is installed later ----
+FROM slim AS full
+RUN python3 -m venv /opt/pyenv \
+ && /opt/pyenv/bin/pip install --no-cache-dir --disable-pip-version-check -r /opt/memdif3d/requirements.txt \
+ && chmod -R a+rX /opt/pyenv

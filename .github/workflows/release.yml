@@ -65,12 +65,16 @@ jobs:
           generate_release_notes: true
 
   docker:
-    name: docker image
+    name: docker image ${{ matrix.target }}
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [full, slim]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -82,21 +86,19 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ghcr.io/spark-hydro/memdif3d
-          tags: |
-            type=semver,pattern={{version}}
-            type=raw,value=latest
-
-      - id: ver
-        run: echo "version=$(git describe --tags --always)" >> "$GITHUB_OUTPUT"
+      # full: latest and 0.1.0;  slim: slim and 0.1.0-slim
+      - id: tags
+        run: |
+          V="${GITHUB_REF_NAME#v}"
+          IMG=ghcr.io/spark-hydro/memdif3d
+          if [ "${{ matrix.target }}" = full ]; then T="$IMG:latest,$IMG:$V"; else T="$IMG:slim,$IMG:$V-slim"; fi
+          echo "tags=$T" >> "$GITHUB_OUTPUT"
+          echo "version=$(git describe --tags --always)" >> "$GITHUB_OUTPUT"
 
       - uses: docker/build-push-action@v6
         with:
           context: .
+          target: ${{ matrix.target }}
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          build-args: VERSION=${{ steps.ver.outputs.version }}
+          tags: ${{ steps.tags.outputs.tags }}
+          build-args: VERSION=${{ steps.tags.outputs.version }}
