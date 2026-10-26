@@ -16,7 +16,7 @@ Start with the full image. Everything below works with it; the slim image has on
 docker pull ghcr.io/spark-hydro/memdif3d:latest
 ```
 
-Images are published for every release (`0.1.0` and `latest` for the full image, `0.1.0-slim` and `slim` for the slim one). To build them yourself from the repository:
+Images are published for every release (`0.1.1` and `latest` for the full image, `0.1.1-slim` and `slim` for the slim one). To build them yourself from the repository:
 
 ```bash
 docker build -t memdif3d --build-arg VERSION=$(git describe --tags --always) .                    # full

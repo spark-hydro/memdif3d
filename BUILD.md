@@ -56,5 +56,5 @@ Other variables: `MEMDIF3D_AUTHOR`, `MEMDIF3D_INSTITUTION`. The build time is th
 ## Releases
 Push a tag to build Linux (gfortran, ifx) and Windows executables and attach them to a GitHub release:
 ```
-git tag v0.1.0 && git push origin v0.1.0
+git tag v0.1.1 && git push origin v0.1.1
 ```
