@@ -29,7 +29,7 @@ ctest --test-dir build/release --output-on-failure
 ```
 
 ## Docker
-A ready-made image holds the model and the Python tools, so nothing but Docker is needed:
+A ready-made, small image holds the model and the Python tools (the plotting packages are installed on first use), so nothing but Docker is needed:
 ```
 docker pull ghcr.io/spark-hydro/memdif3d:latest
 docker run --rm --user "$(id -u):$(id -g)" -v "$PWD":/work ghcr.io/spark-hydro/memdif3d memdif3d /opt/memdif3d/data/reduced_matrix/memdif3d.nam

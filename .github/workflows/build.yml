@@ -63,7 +63,7 @@ jobs:
           docker run --rm memdif3d:ci memdif3d --version | grep -q "Release"
           docker run --rm memdif3d:ci memdif3d-debug --version | grep -q "Debug"
 
-      - name: Short run of the example and a plot from the Python tools
+      - name: Short run of the example and a plot from the Python tools (installs the packages on first use)
         run: |
           mkdir run
           RUN="docker run --rm --user $(id -u):$(id -g) -v $PWD/run:/work memdif3d:ci"

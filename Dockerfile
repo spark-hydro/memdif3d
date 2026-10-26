@@ -10,7 +10,7 @@
 #          memdif3d /opt/memdif3d/data/reduced_matrix/memdif3d.nam
 #   docker run --rm --user "$(id -u):$(id -g)" -v "$PWD":/work -v memdif3d-py:/opt/pyenv memdif3d \
 #          animate_3d.py . --nam /opt/memdif3d/data/reduced_matrix/memdif3d.nam --log --out solute3d.html
-# The volume memdif3d-py keeps the installed Python packages, so they are downloaded only once.
+# The volume memdif3d-py keeps the installed Python packages, so they are downloaded only once (about 240 MB).
 # Your own input set: mount its folder too, e.g. -v /path/to/mycase:/mycase and use /mycase/memdif3d.nam.
 # The debug build (array bounds checks, floating-point traps) is `memdif3d-debug`.
 
