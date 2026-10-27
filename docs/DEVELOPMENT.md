@@ -13,7 +13,7 @@ Tools needed: gfortran 13+ (or Intel ifx), CMake 3.22+, make, Python 3. See BUIL
 memdif3d simulates diffusion from a fully mixed source cell through a membrane into a porous medium (explicit finite volume, 1 mm cells, 1 minute steps). It replaces a spreadsheet model (Reduced_Matrix.xlsx / 3d_nonzeroboundry.xlsx) that was run in pieces by hand. The program reads MODFLOW 6 style text packages (docs/INPUT_SPEC.md) and never reads Excel; `tools/xlsx2memdif.py` converts the spreadsheet once.
 
 ## Conventions
-- MODFLOW names: NLAY x NROW x NCOL = 29 x 43 x 25, arrays ICOL fastest then IROW then ILAY, cell ids `ilay irow icol` (docs/INPUT_SPEC.md). Mapping to the lab's axes in docs/MODEL_SPEC.md: ILAY = Y + 1 (slices), IROW = X, ICOL = Z + 1 (away from the source; ICOL = 1 touches the membrane). The array order is the old one, only the names changed. The Python tools keep tuples (x, y, z) = (row, lay, col). Old sets (NX NY NZ, `# IY` tiles) convert with `tools/convert_layout.py`; old restart files are refused.
+- MODFLOW names: NLAY x NROW x NCOL = 29 x 43 x 25, arrays ICOL fastest then IROW then ILAY, cell ids `ilay irow icol` (docs/INPUT_SPEC.md). Mapping to the lab's axes in docs/MODEL_SPEC.md: ILAY = Y + 1 (slices), IROW = X, ICOL = Z + 1 (away from the source; ICOL = 1 touches the membrane). The array order is the old one, only the names changed. The Python tools keep tuples (x, y, z) = (row, lay, col). Sets in the older layout (NX NY NZ, `# IY` tiles) belong to the `excel-layout` branch; old restart files are refused.
 - Run each simulation in its own folder: outputs go to the current directory.
 - The two irregularities of the spreadsheet (slice Y = 27 off-by-one, constant-0 edge cells in slices 20 and 26) are kept on purpose in `data/reduced_matrix` (861 `neighbor_overrides`, 82 `FIXED` boundary cells in its `.bnd`), because that set reproduces Excel to 2e-16. `data/reduced_matrix_intended` is the same case without them (`tools/make_intended_set.py`); after 28 days the source concentration is 0.0914 instead of 0.0899. Use the intended set for new work unless you compare with the spreadsheet.
 
@@ -33,4 +33,8 @@ One source cell touching ICOL = 1; one uniform sand and membrane; cubic cells; a
 - Compare a full 1440-step VBA day with `field_001.csv` (tools/compare_excel_block.py works on any block of a sheet).
 - A small step-by-step interface (initialise / advance / get / set) for coupling with other models or Python.
 - Heterogeneous soil layers, other source geometries, binary output, OpenMP tuning.
-- Confirm the GitHub Actions workflows (build.yml, release.yml) after the first push; the Windows job has never run.
+- Validate sorption (Kd > 0) and advection against a spreadsheet run; find a reference for the holes.
+- Independent verification for a paper: an analytic benchmark, grid and time-step convergence, a comparison with another code.
+- A box generator (`tools/make_box_model.py`): one command writes a complete input set for a box with a rectangular source footprint.
+- A real membrane layer with its own cell size (needs non-uniform cells along `ICOL`).
+- The Windows program is built by CI but has not been run on a Windows computer.

@@ -1,7 +1,8 @@
-import zipfile, re, json, collections
+import zipfile, re, json, collections, sys
 from xml.etree import ElementTree as ET
 ns='{http://schemas.openxmlformats.org/spreadsheetml/2006/main}'
-z=zipfile.ZipFile('/home/spark/Documents/Andrew/Reduced_Matrix.xlsx')
+# usage: python3 expand_formulas.py path/to/Reduced_Matrix.xlsx   (writes cells.json and pats.json in the current folder)
+z=zipfile.ZipFile(sys.argv[1] if len(sys.argv) > 1 else 'Reduced_Matrix.xlsx')
 root=ET.fromstring(z.read('xl/worksheets/sheet1.xml'))
 def c2n(c):
     n=0

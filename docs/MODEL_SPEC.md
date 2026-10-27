@@ -74,17 +74,10 @@ Boundary cells at time t+1 therefore depend on t+1 values of their interior neig
 ## 5. Initial condition
 `CM = 1` (the 225 M cells = 1), all fluid and boundary cells 0. The sheet's `GA17 = $GQ$1` and `GA61 = $GQ$1*GA64` are mass bookkeeping cells (V*C); nothing reads them, so the model does not need them.
 
-## 6. Spreadsheet quirks (replicate for exact agreement, or fix)
-The formulas deviate from the pattern in two places. Both are far from the source but they are real, so decide whether the Fortran should copy them (`excel_quirks = .true.`) or follow the intended pattern.
+## 6. Spreadsheet quirks (carried by `data/reduced_matrix`, removed in `data/reduced_matrix_intended`)
+The formulas deviate from the pattern in two places. Both are far from the source and both look like editing mistakes in the sheet. memdif3d carries them as exceptions in `data/reduced_matrix` (the 82 typed zeros and the corner cells next to them as `boundary_cells`, the 861 shifted neighbours as `neighbor_overrides`), so that it reproduces the spreadsheet exactly; `data/reduced_matrix_intended` follows the intended pattern. After 28 days the source concentration is 0.0914 in the intended set against 0.0899 in the sheet.
 1. **Slice Y = 27 reads slice 28 shifted by one Z.** Its +Y neighbour formula uses a +27 column offset but the last slice stride is 26, so cell (X,27,Z) reads boundary (X,28,Z+1) instead of (X,28,Z). Affects 861 cells (X = 2..42, Z = 3..23).
 2. **Z = 24 boundary cell is a constant 0** (not 0.82*Z23) for slices `Y = 20` and `Y = 26`, rows X = 2..42 (82 cells). Corner rows X = 1 and 43 at Z = 24: slice 20 follows the normal rule (0.82*Z23), slice 26 reads the constant neighbour so it is 0.
 
-## 7. Fortran sketch
-- `real(8) :: C(1:43, 0:28, 0:24), Cn(...)`, `logical :: solid(...)`, scalar `CM`. Build `solid` and the footprint mask once. Put Z (contiguous in memory) as the first index if you want the fastest inner loop: `C(0:24, 0:28, 1:43)`.
-- Precompute per-cell neighbour flags (or loop over the interior with the solid mask); roughly 28k cells x ~10 flops per step, 40,320 steps for 28 days is about 1.3e9 cell-updates: seconds to a few minutes single-threaded, less with OpenMP.
-- Per step: fluid update -> CM -> boundary cells (order above) -> swap.
-- Output per day: the full field written with the sheet's cell layout (so it can be compared with `Day_NNN.xlsx`), minute-by-minute probe values, and a restart file. Use the same file names as the VBA version.
-- Test plan: (1) the t=1 step against the Excel sheet cached values; (2) a few hundred steps against the VBA `Day_001.xlsx` and its Minutes sheet; (3) mass balance: `V*CM + phi-weighted sum of fluid mass` conserved to rounding while boundary cells are not absorbing (boundarys at 0.82 are, so check only early).
-
-## 8. About `3d_nonzeroboundry.xlsx` (460 MB)
+## 7. About `3d_nonzeroboundry.xlsx` (460 MB)
 Streamed, not opened. 50,736 rows, A:ACT, 44-row block period (1152 blocks) like the small file. But it is not a clean continuous chain: formula blocks appear in runs of about 9 every 18 blocks, with zero-valued or empty blocks in between, some formulas reach 440 rows (10 blocks) up, and 13,634 rows are missing entirely. Treat `Reduced_Matrix.xlsx` as the source of truth for the spec; ask the user how the big file was produced before relying on it.
