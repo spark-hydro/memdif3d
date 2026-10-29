@@ -15,7 +15,7 @@ Python scripts in `tools/`. The environment in `environment.yml` (`conda env cre
 | Script | What it does |
 |---|---|
 | `plot_domain.py` | to-scale side view, zoom at the membrane and plan view of the geometry |
-| `plot_domain_3d.py` | the geometry as an interactive 3D page (HTML) |
+| `plot_domain_3d.py` | the geometry as an interactive 3D page (one HTML file), made from the model input files only (name file and packages; no Excel file, no run output): `python tools/plot_domain_3d.py data/reduced_matrix/rm.nam --out domain3d.html [--ilay 15]`; the orange plane is the layer tile of the `.dis` file at `--ilay`, the purple plane the membrane plane (`ICOL = 1`) |
 | `animate_3d.py` | interactive 3D animation of the field files (one HTML file; drag to rotate while it plays) |
 | `animate_field.py` | animated GIF with a face view and a side view, each switched on or off |
 | `animate_compare.py` | GIF with two runs side by side and their difference, for example without and with holes |

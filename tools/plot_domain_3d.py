@@ -3,10 +3,15 @@
 
     python3 plot_domain_3d.py path/to/rm.nam --out domain3d.html
 
-Boxes (to scale, mm): source cell, membrane faces (red; holes open, closed faces black), solid plate (grey),
-sand cells (tan), boundary cells (blue). Two translucent planes mark the cuts used by the 2D views:
-the side view (XZ at one ILAY) and the face view (XY at ICOL = 1). Drag to rotate, scroll to zoom.
-Axes: x = Z (distance from the membrane, ICOL), y = IROW (rows), z = ILAY (columns).
+The picture is made from the model input files only (the name file and the packages it lists: the grid and
+IDOMAIN of DIS, the FACES map of SRC, the membrane length of DSP, the source volume); no Excel file and no run
+output are needed.
+
+Boxes (to scale, mm): source cell, membrane faces (red; holes green, closed faces black), solid plate (grey),
+sand cells (tan), boundary cells (blue). Two translucent planes show where the 2D pictures cut the domain:
+the layer tile (rows x columns at one ILAY, the same view as one "# ILAY n" block of the .dis file; choose
+the layer with --ilay) and the membrane plane (ICOL = 1). Drag to rotate, scroll to zoom.
+Axes: x = ICOL (columns, distance from the membrane), y = IROW (rows), z = ILAY (layers).
 
 Needs: plotly
 """
@@ -35,7 +40,7 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument('nam')
     ap.add_argument('--out', default='domain3d.html')
-    ap.add_argument('--iy', type=int, default=None, help='slice of the side-view plane (default: source centre)')
+    ap.add_argument('--ilay', '--iy', dest='iy', type=int, default=None, help='layer (ILAY) of the layer-tile plane (default: the middle of the source)')
     a = ap.parse_args()
 
     m = P.Model(a.nam)
@@ -83,15 +88,15 @@ def main():
     def plane(pts, color, name):
         x, y, z = zip(*pts)
         return go.Mesh3d(x=x, y=y, z=z, i=[0, 0], j=[1, 2], k=[2, 3], color=color, opacity=0.30, name=name, showlegend=True, hoverinfo='name')
-    tr.append(plane([(0, gx0, iy), (xmax, gx0, iy), (xmax, gx1, iy), (0, gx1, iy)], '#ff8c00', f'side-view cut (XZ at ILAY = {iy})'))
+    tr.append(plane([(0, gx0, iy), (xmax, gx0, iy), (xmax, gx1, iy), (0, gx1, iy)], '#ff8c00', f'layer cut: rows x columns at ILAY = {iy} (one tile of the .dis file)'))
     zf = zlo(1) + 0.5
-    tr.append(plane([(zf, gx0, gy0), (zf, gx1, gy0), (zf, gx1, gy1), (zf, gx0, gy1)], '#9b59b6', 'face-view cut (XY at ICOL = 1)'))
+    tr.append(plane([(zf, gx0, gy0), (zf, gx1, gy0), (zf, gx1, gy1), (zf, gx0, gy1)], '#9b59b6', 'membrane plane: ICOL = 1'))
 
     fig = go.Figure(tr)
     fig.update_layout(
-        title=f'memdif3d domain: {m.nx} x {m.ny} x {m.nz} cells of 1 mm (IROW x ILAY x ICOL), membrane {lm:g} mm',
-        scene=dict(xaxis=dict(title='ICOL (Z), away from the source (mm)'), yaxis=dict(title='IROW (X)'),
-                   zaxis=dict(title='Y = ILAY (columns)'), aspectmode='data', camera=dict(eye=dict(x=1.6, y=-1.9, z=1.1))),
+        title=f'memdif3d domain: {m.ny} layers x {m.nx} rows x {m.nz} columns of 1 mm (NLAY x NROW x NCOL), membrane {lm:g} mm',
+        scene=dict(xaxis=dict(title='ICOL: columns, away from the source (mm)'), yaxis=dict(title='IROW: rows'),
+                   zaxis=dict(title='ILAY: layers'), aspectmode='data', camera=dict(eye=dict(x=1.6, y=-1.9, z=1.1))),
         legend=dict(x=0.01, y=0.99), margin=dict(l=0, r=0, t=50, b=0), height=720)
     fig.write_html(a.out, include_plotlyjs=True, full_html=True)
     print(f'wrote {a.out}')
