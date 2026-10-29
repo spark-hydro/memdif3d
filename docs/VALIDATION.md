@@ -42,7 +42,15 @@ The two irregularities were confirmed as mistakes. `tools/fix_reduced_matrix_xls
 | LibreOffice recalculates the workbook's own formulas on a random concentration field; every cell compared with the prototype step of `data/reduced_matrix_intended` | max abs difference 7.8e-16 (sand cells), 6.7e-16 (boundary cells), 3.3e-16 (source); 0 cells above 1e-12 |
 | control: the original workbook, same procedure | matches `data/reduced_matrix` to 7.8e-16, but not the intended set (1,976 cells above 1e-12, up to 0.74 in the typed-zero cells and 0.048 in sand cells) |
 
-The corrected workbook has not been run with the macro in Excel; use `excel/DailyRun_fixed.bas` (blocks A6:ACU48 and A50:ACU92) in a macro-enabled copy of it.
+**Run with the macro in Excel** (Windows, 2026-10-28/29): `excel/DailyRun_fixed.bas` in a macro-enabled copy of the corrected workbook, from the initial state, compared with memdif3d on `data/reduced_matrix_intended` (`compare_excel_block.py Day_...xlsx field_001.csv --first-row 6 --fixed-layout`):
+
+| run | all cells | boundary cells | source |
+|---|---|---|---|
+| 10 steps | 5.6e-17 | 0 | equal to 15 digits |
+| 1440 steps (one day) | 2.8e-16 | 4.2e-17 | 0.886681363528 in both; the `Minutes` sheet (probe cell / 5625) agrees with the Fortran probe file in all 1440 minutes to 1.1e-16 |
+| control: the same 1440-step file against `data/reduced_matrix` (the original irregularities) | 1.6e-2 | 1.3e-2 | 0.886624 against 0.886681 |
+
+After 10 steps the two models are still identical (the solute has not reached the repaired places); the fix shows from about 700 steps on, so the one-day run is the real test. The Day files are not in the repository.
 
 ## 4. Independent physics checks (tests/test_cases.py)
 Sealed box: mass conserved to 5e-15 and the end state equals the analytic uniform concentration V*CM0 / (V + R*Nfluid). Off-centre source with sorption, advection and neighbour overrides: Fortran equals the Python prototype to 1e-16.
