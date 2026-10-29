@@ -52,7 +52,7 @@ conda activate memdif3d
 This installs numpy, matplotlib, Pillow and plotly. The input converters and the prototype solver need only the Python standard library.
 
 ## Tests
-`ctest` runs the version checks, the input-file check, a full regression of the field and probe output against a Python prototype (with restart and `--fresh`), the same check for the intended set, tests on other geometries (off-centre source, sorption, advection, holes, a sealed box with an analytic end state, bad input, the stability guard) and a smoke test of the animation script.
+`ctest` runs the version checks, the input-file check, a full regression of the field and probe output against a Python prototype (with restart and `--fresh`), tests on other geometries (off-centre source, sorption, advection, holes, a sealed box with an analytic end state, bad input, the stability guard) and a smoke test of the animation script.
 
 ## Building this manual
 ```bash

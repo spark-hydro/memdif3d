@@ -29,4 +29,4 @@ Run the same command in the same folder. The program reads the newest restart fi
 It has the same style (blocks, `INTERNAL` arrays, a name file without unit numbers) but it is not compatible. Arrays use the MODFLOW order (column fastest, then row, then layer), and the packages `SRC`, `BND` and `ADV` are specific to this model.
 
 **Why do two input sets exist for the Reduced_Matrix case?**
-`data/reduced_matrix` reproduces the spreadsheet exactly, including two irregularities that look like editing mistakes in the sheet. `data/reduced_matrix_intended` is the same case without them. See [Validation](VALIDATION.md).
+Only one is kept. `data/reduced_matrix` comes from the corrected workbook. The original workbook had two editing mistakes, which its author confirmed; the model of the original workbook (for comparing with the old Excel files) is made with `tools/xlsx2memdif.py Reduced_Matrix.xlsx`. See [Validation](VALIDATION.md).

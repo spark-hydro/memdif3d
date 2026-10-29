@@ -1,0 +1,16 @@
+# memdif3d input written by xlsx2memdif.py from Reduced_Matrix_fixed.xlsx
+BEGIN options
+  TITLE Reduced_Matrix case, corrected spreadsheet
+END options
+
+BEGIN packages
+  TDIS  rm.tdis
+  DIS   rm.dis
+  IC    rm.ic
+  DSP   rm.dsp
+  MST   rm.mst
+  SRC   rm.src
+  ADV   rm.adv
+  BND   rm.bnd
+  OC    rm.oc
+END packages

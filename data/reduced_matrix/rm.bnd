@@ -1,5 +1,4 @@
-# memdif3d input written by xlsx2memdif.py from Reduced_Matrix.xlsx
-# Intended pattern (the two spreadsheet irregularities removed, see tools/make_intended_set.py).
+# memdif3d input written by xlsx2memdif.py from Reduced_Matrix_fixed.xlsx
 # memdif3d boundary: five side rules, per-cell exceptions, neighbour overrides.
 # Boundary cells are the IDOMAIN = 2 cells. The rules are evaluated in this order, a cell on two sides takes
 # the later rule and COPY reads the new value of the cell one step inward; then the exceptions, in file order.

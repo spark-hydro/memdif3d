@@ -28,14 +28,14 @@ Mount the folder where the output should go. The program writes its files to the
 
 ```bash
 docker run --rm --user "$(id -u):$(id -g)" -v "$PWD":/work ghcr.io/spark-hydro/memdif3d \
-    memdif3d /opt/memdif3d/data/reduced_matrix/memdif3d.nam
+    memdif3d /opt/memdif3d/data/reduced_matrix/rm.nam
 ```
 
-The example input sets (`reduced_matrix` and `reduced_matrix_intended`) are in `/opt/memdif3d/data`. For your own input set, mount its folder as well:
+The example input set (`reduced_matrix`, files `rm.*`) is in `/opt/memdif3d/data`. For your own input set, mount its folder as well:
 
 ```bash
 docker run --rm --user "$(id -u):$(id -g)" -v "$PWD":/work -v /path/to/mycase:/mycase \
-    ghcr.io/spark-hydro/memdif3d memdif3d /mycase/memdif3d.nam
+    ghcr.io/spark-hydro/memdif3d memdif3d /mycase/rm.nam
 ```
 
 All options of the program work the same (`--fresh`, `--nperiods`, `--snapshot-every`, ...). Running without arguments prints the usage.
@@ -45,7 +45,7 @@ The scripts of `tools/` are on the `PATH` of the image. Run them in the folder w
 
 ```bash
 docker run --rm --user "$(id -u):$(id -g)" -v "$PWD":/work ghcr.io/spark-hydro/memdif3d \
-    animate_3d.py . --nam /opt/memdif3d/data/reduced_matrix/memdif3d.nam --log --out solute3d.html
+    animate_3d.py . --nam /opt/memdif3d/data/reduced_matrix/rm.nam --log --out solute3d.html
 ```
 
 The page `solute3d.html` opens in a browser on your own computer. The other tools work the same way: `plot_domain.py`, `plot_domain_3d.py`, `animate_field.py`, `animate_compare.py`, `compare_excel_block.py`, `make_holes.py`. See [Tools](tools.md). Nothing in the image needs a screen.
@@ -55,7 +55,7 @@ If a run stops with an error you do not understand, use the debug build. It chec
 
 ```bash
 docker run --rm --user "$(id -u):$(id -g)" -v "$PWD":/work ghcr.io/spark-hydro/memdif3d \
-    memdif3d-debug /opt/memdif3d/data/reduced_matrix/memdif3d.nam --nperiods 1 --steps-per-period 10
+    memdif3d-debug /opt/memdif3d/data/reduced_matrix/rm.nam --nperiods 1 --steps-per-period 10
 ```
 
 ## What is inside
@@ -75,7 +75,7 @@ With `--rm` a container is deleted when it ends, and the installed packages woul
 
 ```bash
 docker run --rm --user "$(id -u):$(id -g)" -v "$PWD":/work -v memdif3d-py:/opt/pyenv \
-    ghcr.io/spark-hydro/memdif3d:slim animate_3d.py . --nam /opt/memdif3d/data/reduced_matrix/memdif3d.nam --out solute3d.html
+    ghcr.io/spark-hydro/memdif3d:slim animate_3d.py . --nam /opt/memdif3d/data/reduced_matrix/rm.nam --out solute3d.html
 ```
 
 Docker creates the volume `memdif3d-py` the first time it is named. Later runs find the packages there and start in about two seconds. `docker volume ls` lists your volumes and `docker volume rm memdif3d-py` deletes it.

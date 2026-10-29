@@ -1,4 +1,4 @@
-# memdif3d input written by xlsx2memdif.py from Reduced_Matrix.xlsx
+# memdif3d input written by xlsx2memdif.py from Reduced_Matrix_fixed.xlsx
 # {period} in a file name is replaced by the period (day) number.
 BEGIN options
   DAILY_FIELD   FILEOUT field_{period}.csv

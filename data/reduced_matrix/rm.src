@@ -1,4 +1,4 @@
-# memdif3d input written by xlsx2memdif.py from Reduced_Matrix.xlsx
+# memdif3d input written by xlsx2memdif.py from Reduced_Matrix_fixed.xlsx
 # One fully mixed source cell. Its faces touch ICOL = 1 under the cells of the FACES map: 0 none, 1 membrane, 2 hole, 3 closed.
 BEGIN source
   VOLUME 5625.0

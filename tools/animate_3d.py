@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Interactive 3D animation of the memdif3d field files: one self-contained HTML file.
 
-    python3 animate_3d.py RUN_DIR --nam path/to/memdif3d.nam --out solute3d.html
+    python3 animate_3d.py RUN_DIR --nam path/to/rm.nam --out solute3d.html
     python3 animate_3d.py RUN_DIR --nam ... --log --pattern 'snap_*.csv'
 
 Open the HTML in any browser (no server, no internet). Drag to rotate, scroll to zoom, right-drag to

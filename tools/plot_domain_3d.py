@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Interactive 3D picture of the model domain from the input files (one HTML file).
 
-    python3 plot_domain_3d.py path/to/memdif3d.nam --out domain3d.html
+    python3 plot_domain_3d.py path/to/rm.nam --out domain3d.html
 
 Boxes (to scale, mm): source cell, membrane faces (red; holes open, closed faces black), solid plate (grey),
 sand cells (tan), boundary cells (blue). Two translucent planes mark the cuts used by the 2D views:

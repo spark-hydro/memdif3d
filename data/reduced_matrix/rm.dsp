@@ -1,4 +1,4 @@
-# memdif3d input written by xlsx2memdif.py from Reduced_Matrix.xlsx
+# memdif3d input written by xlsx2memdif.py from Reduced_Matrix_fixed.xlsx
 # Mass-transfer coefficient K = D * porosity / length / tortuosity
 BEGIN sand
   DIFFUSION 0.125

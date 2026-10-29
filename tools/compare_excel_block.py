@@ -2,7 +2,7 @@
 """Compare a memdif3d field file with one block of values stored in a spreadsheet (e.g. the last
 time block of 3d_nonzeroboundry.xlsx, read as a stream, so huge files are fine).
 
-    python3 compare_excel_block.py BOOK.xlsx FIELD.csv --first-row 50694 --nam memdif3d.nam
+    python3 compare_excel_block.py BOOK.xlsx FIELD.csv --first-row 50694 --nam rm.nam
 
 --first-row is the first sheet row of the block (43 rows). Needs numpy. The column layout is the one
 of Reduced_Matrix.xlsx (tiles at columns 1, 27, ..., see docs/MODEL_SPEC.md section 3).

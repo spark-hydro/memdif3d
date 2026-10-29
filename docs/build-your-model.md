@@ -8,7 +8,7 @@ A model is a folder of small text files that a name file lists. The quickest way
 ## The files in a set
 | File | Holds | Change it to |
 |---|---|---|
-| `memdif3d.nam` | the list of packages | rename or add a package |
+| `rm.nam` | the list of packages | rename or add a package |
 | `.tdis` | step length, steps per period, number of periods | run longer or shorter |
 | `.dis` | grid size and `IDOMAIN` | change the geometry |
 | `.ic` | start concentration of every cell | start from another state |
@@ -22,10 +22,10 @@ Details of every file are in [Input files](INPUT_SPEC.md).
 
 ## 1. Copy a template
 ```bash
-cp -r data/reduced_matrix_intended data/mycase
+cp -r data/reduced_matrix data/mycase
 ```
 
-Use `reduced_matrix_intended` as the template. `reduced_matrix` carries the irregularities of the spreadsheet and is meant for comparing with it.
+Use `reduced_matrix` as the template. Its files are called `rm.*`; keep or change the names, but update the package list in the `.nam` file to match.
 
 ## 2. Change the run
 In `.tdis`: `STEP_LENGTH` (minutes), `STEPS_PER_PERIOD` and `NPERIODS`. For a quick test you do not need to edit anything: `--nperiods 1 --steps-per-period 10`.
@@ -73,8 +73,8 @@ Change the dimensions in `.dis` and write the three arrays in the order *column 
 `tools/make_test_case.py` writes small complete sets for the tests (an off-centre source, a sealed box) and is a working example of how the arrays are generated; read it as a template.
 
 ## 8. Check the set before a long run
-1. **Look at it.** `python tools/plot_domain.py data/mycase/memdif3d.nam --out domain.png` draws the geometry to scale (source, membrane faces, plate, sand, boundary cells). `python tools/plot_domain_3d.py ...` makes an interactive 3D version.
-2. **Run a few steps.** `memdif3d data/mycase/memdif3d.nam --nperiods 1 --steps-per-period 10` in an empty folder. The log prints the counts of fluid and boundary cells and source faces: they should be what you drew.
+1. **Look at it.** `python tools/plot_domain.py data/mycase/rm.nam --out domain.png` draws the geometry to scale (source, membrane faces, plate, sand, boundary cells). `python tools/plot_domain_3d.py ...` makes an interactive 3D version.
+2. **Run a few steps.** `memdif3d data/mycase/rm.nam --nperiods 1 --steps-per-period 10` in an empty folder. The log prints the counts of fluid and boundary cells and source faces: they should be what you drew.
 3. **Test the mass.** A sealed box (no boundary cells) conserves \(V\,C_M + R\sum C\) to rounding error. A faulty geometry usually shows up here first.
 4. **Compare with the prototype.** `python tools/memdif_proto.py` reads the same files with independent code, and `ctest` shows how the regression tests compare it with the Fortran output.
 

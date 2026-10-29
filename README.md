@@ -30,8 +30,7 @@ Current limits: one source cell touching the membrane, one uniform sand and memb
 | `docs/` | the manual (MkDocs, `mkdocs.yml`) |
 | `excel/` | `DailyRun.bas`, VBA that runs the spreadsheet model one day at a time (used to produce reference results) |
 | `tools/` | Python: input converters and generators, prototype solver, plots, animations, comparison with the spreadsheet |
-| `data/reduced_matrix/` | input set generated from `Reduced_Matrix.xlsx`; reproduces the spreadsheet exactly |
-| `data/reduced_matrix_intended/` | the same case without the two irregularities of the spreadsheet |
+| `data/reduced_matrix/` | the example input set (`rm.nam`, `rm.dis`, ...), generated from the corrected workbook `Reduced_Matrix_fixed.xlsx` |
 | `tests/` | regression tests (run by `ctest`) |
 | `docker/` | files of the Docker images |
 
@@ -46,21 +45,21 @@ ctest --test-dir build/release --output-on-failure
 A ready-made image holds the model and the Python tools, so nothing but Docker is needed:
 ```
 docker pull ghcr.io/spark-hydro/memdif3d:latest
-docker run --rm --user "$(id -u):$(id -g)" -v "$PWD":/work ghcr.io/spark-hydro/memdif3d memdif3d /opt/memdif3d/data/reduced_matrix/memdif3d.nam
+docker run --rm --user "$(id -u):$(id -g)" -v "$PWD":/work ghcr.io/spark-hydro/memdif3d memdif3d /opt/memdif3d/data/reduced_matrix/rm.nam
 ```
 The image (about 530 MB) includes numpy, matplotlib and plotly for the plotting tools. A small image without them (`:slim`, about 190 MB) installs them on first use. See [docs/docker.md](docs/docker.md).
 
 ## Run
 ```
 mkdir run1 && cd run1
-../build/release/memdif3d ../data/reduced_matrix/memdif3d.nam
+../build/release/memdif3d ../data/reduced_matrix/rm.nam
 ```
 Writes `field_001.csv` ... (one per day), `probes_001.csv` ... (one row per minute) and restart files in the current folder. Run the same command again after an interruption to continue from the last finished day; add `--fresh` to start over.
 
 ## Pictures and animations
 `tools/animate_3d.py` makes an interactive 3D animation (one HTML file; drag to rotate while it plays):
 ```
-python tools/animate_3d.py run1 --nam data/reduced_matrix/memdif3d.nam --log --out solute3d.html
+python tools/animate_3d.py run1 --nam data/reduced_matrix/rm.nam --log --out solute3d.html
 ```
 `tools/animate_field.py` makes an animated GIF with a face view and a side view, each switched on or off, and `tools/animate_compare.py` puts two runs side by side. Membrane with holes: `python tools/make_holes.py data/reduced_matrix data/holes_p3 --pitch 3 --size 1` writes a new input set (a `FACES` map with holes). The scripts need numpy, matplotlib, Pillow and plotly (`conda env create -f environment.yml`), or use the Docker image. See [docs/tools.md](docs/tools.md).
 

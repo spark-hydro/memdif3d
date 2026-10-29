@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Draw the model domain from the input files, to scale: source, membrane, sand, plate, boundary cells.
 
-    python3 plot_domain.py path/to/memdif3d.nam --out domain.png [--iy 15]
+    python3 plot_domain.py path/to/rm.nam --out domain.png [--iy 15]
 
 Three panels: side view (XZ section at ILAY, everything to scale in mm), a zoom at the membrane, and a
 plan view of the cells that touch the membrane (ICOL = 1). The membrane is not a layer of cells in the

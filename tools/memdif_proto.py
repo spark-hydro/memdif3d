@@ -5,7 +5,7 @@ Reads only the package files, so it checks that they carry the whole model. The 
 should reproduce this logic. Run as a script to compare one step on a random field with
 ref_step.py (which was validated against the spreadsheet formulas):
 
-    python3 memdif_proto.py ../data/reduced_matrix/memdif3d.nam
+    python3 memdif_proto.py ../data/reduced_matrix/rm.nam
 """
 import os
 import random
@@ -199,7 +199,7 @@ def selftest(namefile):
             Cref[(p[0], p[1] - 1, p[2] - 1)] = C[p]       # ref_step uses Y 0..28, Z 0..24
     CM = random.random()
     N, CMn = m.step(C, CM)
-    Nr, CMr = R.step(Cref, CM)
+    Nr, CMr = R.step(Cref, CM, quirks=False)
     worst = 0.0
     for p, code in m.idom.items():
         worst = max(worst, abs(N[p] - (Nr.get((p[0], p[1] - 1, p[2] - 1), 0.0) if code else 0.0)))

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Animated GIF of the memdif3d daily field files, with a face view and/or a side view.
 
-    python3 animate_field.py RUN_DIR --nam path/to/memdif3d.nam --out solute.gif
+    python3 animate_field.py RUN_DIR --nam path/to/rm.nam --out solute.gif
     python3 animate_field.py RUN_DIR --side off              # face view only
     python3 animate_field.py RUN_DIR --face off --log        # side view only, log colour scale
 

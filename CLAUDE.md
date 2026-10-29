@@ -4,7 +4,7 @@ Fortran program for diffusion from a fully mixed source cell through a membrane 
 
 ## When the user says "resume"
 1. Read `docs/DEVELOPMENT.md` and `docs/VALIDATION.md`; run `git log --oneline -10` and `git status`.
-2. Build and test: `cmake --preset gfortran_release_linux && cmake --build build/release && ctest --test-dir build/release --output-on-failure` (7 tests; `animate_smoke` skips without matplotlib).
+2. Build and test: `cmake --preset gfortran_release_linux && cmake --build build/release && ctest --test-dir build/release --output-on-failure` (6 tests; `animate_smoke` skips without matplotlib).
 3. Tell the user where things stand and the open items, then ask what to do next.
 The author's longer log may exist as `WORKING.md` in an Obsidian vault folder `00_projects/memdif3d` (with `resume.md`); ask for the vault path if it is not among the added folders. The Excel files, the voice recording and run outputs are not in the repo.
 

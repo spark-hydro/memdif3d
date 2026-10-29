@@ -5,7 +5,7 @@ The sheet holds the model as two stacked blocks: rows b0.. = state at time t (nu
 rows b1.. = state at t+1 (formulas). The geometry, boundary rules and parameters are derived
 from those formulas, not typed in. See ../docs/INPUT_SPEC.md for the file formats.
 
-    python3 xlsx2memdif.py Reduced_Matrix.xlsx ../data/reduced_matrix
+    python3 xlsx2memdif.py Reduced_Matrix_fixed.xlsx ../data/reduced_matrix --name rm
 """
 import argparse, collections, os, re, sys, zipfile
 from xml.etree import ElementTree as ET
@@ -104,6 +104,7 @@ def main():
     ap.add_argument('--days', type=int, default=28)
     ap.add_argument('--steps-per-day', type=int, default=1440)
     ap.add_argument('--title', default=None)
+    ap.add_argument('--name', default='memdif3d', help='base name of the input files (default memdif3d: memdif3d.nam, memdif3d.dis, ...)')
     args = ap.parse_args()
 
     vals, forms = load_sheet(args.xlsx)
@@ -362,23 +363,23 @@ def main():
     title = args.title or f'{os.path.basename(args.xlsx)}'
     hdr = f'# memdif3d input written by xlsx2memdif.py from {os.path.basename(args.xlsx)}\n'
 
-    w('memdif3d.nam', hdr + f'''BEGIN options
+    w(f'{args.name}.nam', hdr + f'''BEGIN options
   TITLE {title}
 END options
 
 BEGIN packages
-  TDIS  memdif3d.tdis
-  DIS   memdif3d.dis
-  IC    memdif3d.ic
-  DSP   memdif3d.dsp
-  MST   memdif3d.mst
-  SRC   memdif3d.src
-  ADV   memdif3d.adv
-  BND   memdif3d.bnd
-  OC    memdif3d.oc
+  TDIS  {args.name}.tdis
+  DIS   {args.name}.dis
+  IC    {args.name}.ic
+  DSP   {args.name}.dsp
+  MST   {args.name}.mst
+  SRC   {args.name}.src
+  ADV   {args.name}.adv
+  BND   {args.name}.bnd
+  OC    {args.name}.oc
 END packages
 ''')
-    w('memdif3d.tdis', hdr + f'''BEGIN options
+    w(f'{args.name}.tdis', hdr + f'''BEGIN options
   TIME_UNITS minutes
 END options
 
@@ -397,7 +398,7 @@ END timing
                 lines.append('    ' + ' '.join(fmt(getter((x, iy, iz))) for iz in range(1, NZ + 1)))
         return '\n'.join(lines) + '\n'
 
-    w('memdif3d.dis', hdr + f'''# IDOMAIN: 1 fluid cell, 0 solid (never used), 2 boundary cell (see BND)
+    w(f'{args.name}.dis', hdr + f'''# IDOMAIN: 1 fluid cell, 0 solid (never used), 2 boundary cell (see BND)
 # Array order: ICOL fastest, then IROW, then ILAY (MODFLOW order). ICOL = 1 touches the membrane.
 BEGIN dimensions
   NLAY {NY}
@@ -408,10 +409,10 @@ END dimensions
 BEGIN griddata
 {array('IDOMAIN', lambda p: idomain[p], str)}END griddata
 ''')
-    w('memdif3d.ic', hdr + f'''BEGIN griddata
+    w(f'{args.name}.ic', hdr + f'''BEGIN griddata
 {array('STRT', lambda p: c0(*p), repr)}END griddata
 ''')
-    w('memdif3d.dsp', hdr + f'''# Mass-transfer coefficient K = D * porosity / length / tortuosity
+    w(f'{args.name}.dsp', hdr + f'''# Mass-transfer coefficient K = D * porosity / length / tortuosity
 BEGIN sand
   DIFFUSION {sand[0]!r}
   TORTUOSITY {sand[1]!r}
@@ -426,7 +427,7 @@ BEGIN membrane
   LENGTH {memb[3]!r}
 END membrane
 ''')
-    w('memdif3d.mst', hdr + f'''# Retardation R = POROSITY + BULK_DENSITY * KD
+    w(f'{args.name}.mst', hdr + f'''# Retardation R = POROSITY + BULK_DENSITY * KD
 BEGIN options
   POROSITY {phi_r!r}
   BULK_DENSITY {rho!r}
@@ -434,7 +435,7 @@ BEGIN options
 END options
 ''')
     fl = '\n'.join(f'  {iy} {x}' for (x, iy) in sorted(faces, key=lambda q: (q[1], q[0])))
-    w('memdif3d.src', hdr + f'''# One fully mixed source cell. Its faces touch ICOL = 1 of the listed (ILAY, IROW) cells.
+    w(f'{args.name}.src', hdr + f'''# One fully mixed source cell. Its faces touch ICOL = 1 of the listed (ILAY, IROW) cells.
 BEGIN source
   VOLUME {V!r}
   START_CONC {cm0!r}
@@ -444,7 +445,7 @@ BEGIN faces
 {fl}
 END faces
 ''')
-    w('memdif3d.adv', hdr + f'''# Upwind term VELOCITY * (C(IROW+1) - C) where ADVMASK = 1. VELOCITY is per time step.
+    w(f'{args.name}.adv', hdr + f'''# Upwind term VELOCITY * (C(IROW+1) - C) where ADVMASK = 1. VELOCITY is per time step.
 BEGIN options
   VELOCITY {v!r}
 END options
@@ -468,7 +469,7 @@ BEGIN griddata
             ol.append(f'  {pos[1]} {pos[0]} {pos[2]} {dn} SOURCE')
         else:
             ol.append(f'  {pos[1]} {pos[0]} {pos[2]} {dn} SET {t[1]} {t[0]} {t[2]}')
-    w('memdif3d.bnd', hdr + f'''# Ghost cells (IDOMAIN = 2), evaluated in file order after the fluid cells and the source.
+    w(f'{args.name}.bnd', hdr + f'''# Ghost cells (IDOMAIN = 2), evaluated in file order after the fluid cells and the source.
 #   cell ids are: ilay irow icol.   COPY = factor * new value of the cell (slay srow scol)   FIXED = constant
 # Neighbour overrides replace the default neighbour of a fluid cell in one direction.
 #   default: the 6 face neighbours that are not solid; ICOL = 1 under a source face looks at the source.
@@ -483,7 +484,7 @@ END neighbor_overrides
     fx = sorted(x for x, _ in faces)
     fy = sorted(y for _, y in faces)
     cx, cy = fx[len(fx) // 2], fy[len(fy) // 2]
-    w('memdif3d.oc', hdr + f'''# {{period}} in a file name is replaced by the period (day) number.
+    w(f'{args.name}.oc', hdr + f'''# {{period}} in a file name is replaced by the period (day) number.
 BEGIN options
   DAILY_FIELD   FILEOUT field_{{period}}.csv
   PROBES        FILEOUT probes_{{period}}.csv

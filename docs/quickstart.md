@@ -7,7 +7,7 @@ Run each simulation in its own folder, because the output files go to the curren
 
 ```bash
 mkdir -p ~/memdif3d_runs/run1 && cd ~/memdif3d_runs/run1
-/path/to/memdif3d/build/release/memdif3d /path/to/memdif3d/data/reduced_matrix/memdif3d.nam
+/path/to/memdif3d/build/release/memdif3d /path/to/memdif3d/data/reduced_matrix/rm.nam
 ```
 
 The program prints a banner, the grid size, the stability check and one line per day:
@@ -66,7 +66,7 @@ plt.show()
 Animations and domain pictures use the scripts in `tools/` (see [Tools](tools.md)):
 
 ```bash
-python tools/animate_3d.py run1 --nam data/reduced_matrix/memdif3d.nam --log --out solute3d.html
+python tools/animate_3d.py run1 --nam data/reduced_matrix/rm.nam --log --out solute3d.html
 ```
 
 The HTML file opens in any browser. Drag to rotate while the animation plays.
@@ -75,7 +75,7 @@ The HTML file opens in any browser. Drag to rotate while the animation plays.
 ```bash
 python tools/make_holes.py data/reduced_matrix data/holes_p3 --pitch 3 --size 1
 mkdir -p ~/memdif3d_runs/holes && cd ~/memdif3d_runs/holes
-/path/to/memdif3d/build/release/memdif3d /path/to/memdif3d/data/holes_p3/memdif3d.nam
+/path/to/memdif3d/build/release/memdif3d /path/to/memdif3d/data/holes_p3/rm.nam
 ```
 
 `make_holes.py` copies the input set and changes only the faces map. The next step is [Build your own model](build-your-model.md).

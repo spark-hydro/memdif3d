@@ -1,7 +1,0 @@
-# memdif3d input written by xlsx2memdif.py from Reduced_Matrix.xlsx
-# Retardation R = POROSITY + BULK_DENSITY * KD
-BEGIN options
-  POROSITY 0.3
-  BULK_DENSITY 1.6
-  KD 0.0
-END options

@@ -71,9 +71,9 @@ jobs:
         run: |
           mkdir run
           RUN="docker run --rm --user $(id -u):$(id -g) -v $PWD/run:/work memdif3d:ci"
-          $RUN memdif3d /opt/memdif3d/data/reduced_matrix/memdif3d.nam --nperiods 1 --steps-per-period 20 --fresh
+          $RUN memdif3d /opt/memdif3d/data/reduced_matrix/rm.nam --nperiods 1 --steps-per-period 20 --fresh
           test -s run/field_001.csv
-          $RUN animate_3d.py /work --nam /opt/memdif3d/data/reduced_matrix/memdif3d.nam --out /work/solute3d.html 2> run/err.txt
+          $RUN animate_3d.py /work --nam /opt/memdif3d/data/reduced_matrix/rm.nam --out /work/solute3d.html 2> run/err.txt
           test -s run/solute3d.html
 
       - name: The full image installs nothing at run time, the slim image does
