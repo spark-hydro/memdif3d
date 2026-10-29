@@ -76,6 +76,19 @@ jobs:
           $RUN animate_3d.py /work --nam /opt/memdif3d/data/reduced_matrix/rm.nam --out /work/solute3d.html 2> run/err.txt
           test -s run/solute3d.html
 
+      - name: A model of the user, mounted from a folder outside the image
+        run: |
+          mkdir -p mycase out && cp data/reduced_matrix/rm.* mycase/
+          docker run --rm --user "$(id -u):$(id -g)" -v "$PWD/mycase":/model:ro -v "$PWD/out":/work memdif3d:ci /model/rm.nam --nperiods 1 --steps-per-period 5 --fresh
+          test -s out/field_001.csv
+          docker run --rm --user "$(id -u):$(id -g)" -v "$PWD/mycase":/work memdif3d:ci rm.nam --nperiods 1 --steps-per-period 5 --fresh
+          test -s mycase/field_001.csv
+          if docker run --rm memdif3d:ci nothere/rm.nam; then echo "a wrong model path must fail"; exit 1; fi
+
       - name: The full image installs nothing at run time, the slim image does
         run: |
-          if [ "${{ matrix.target }}" = full ]; then ! grep -q "first use" run/err.txt; else grep -q "first use" run/err.txt; fi
+          if [ "${{ matrix.target }}" = full ]; then
+            if grep -q "first use" run/err.txt; then echo "the full image must not install packages at run time"; exit 1; fi
+          else
+            grep -q "first use" run/err.txt
+          fi

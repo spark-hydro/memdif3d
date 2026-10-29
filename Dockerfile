@@ -15,7 +15,9 @@
 #          memdif3d /opt/memdif3d/data/reduced_matrix/rm.nam
 #   docker run --rm --user "$(id -u):$(id -g)" -v "$PWD":/work memdif3d \
 #          animate_3d.py . --nam /opt/memdif3d/data/reduced_matrix/rm.nam --log --out solute3d.html
-# Your own input set: mount its folder too, e.g. -v /path/to/mycase:/mycase and use /mycase/rm.nam.
+# Your own model: the first argument is the path of its name file, read inside the container (see docker/entrypoint.sh):
+#   docker run --rm --user "$(id -u):$(id -g)" -v "$PWD":/work memdif3d mymodel/rm.nam      # relative to the mounted /work
+#   docker run --rm -v "$PWD":/work -v /path/to/model:/model:ro memdif3d /model/rm.nam      # model elsewhere
 # The debug build (array bounds checks, floating-point traps) is `memdif3d-debug`.
 
 # ---- stage 1: build the program (release and debug) ----

@@ -5,8 +5,26 @@
 # installed into $MEMDIF3D_PYENV (needs internet). Keep them between runs with a volume:  -v memdif3d-py:/opt/pyenv
 # Running the model (memdif3d, memdif3d-debug) and the tools that use only the standard library
 # (make_holes.py, convert_input.py, xlsx2memdif.py, ...) never installs anything.
+#
+# Your own model: give the path of its name file (.nam) as the first argument and the program runs on it, e.g.
+#   docker run --rm --user "$(id -u):$(id -g)" -v "$PWD":/work IMAGE mymodel/rm.nam --nperiods 1
+# The path is read inside the container: relative to /work (the folder mounted there) or absolute (-v /path/to/model:/model
+# and /model/rm.nam). The output files are written to /work.
 set -e
 PYENV="${MEMDIF3D_PYENV:-/opt/pyenv}"
+
+case "$1" in
+  *.nam)
+    if [ ! -f "$1" ]; then
+      echo "[memdif3d] cannot find the model file '$1' (working folder: $(pwd))." >&2
+      echo "[memdif3d] mount the folder that holds your model, for example  -v \"\$PWD\":/work  and give a path relative to it," >&2
+      echo "[memdif3d] or  -v /path/to/model:/model  and use /model/<name>.nam" >&2
+      exit 2
+    fi
+    set -- memdif3d "$@" ;;
+  -*)
+    set -- memdif3d "$@" ;;      # an option such as --version or --help
+esac
 
 need=no
 case "$1" in

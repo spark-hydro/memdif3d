@@ -23,22 +23,29 @@ docker build -t memdif3d --build-arg VERSION=$(git describe --tags --always) .  
 docker build -t memdif3d:slim --target slim --build-arg VERSION=$(git describe --tags --always) . # slim
 ```
 
-## Run a model
-Mount the folder where the output should go. The program writes its files to the current directory, which is `/work` in the container. `--user` makes the output files belong to you.
+## Run your own model
+Go to the folder that holds your model (the name file and the package files it lists) and give the path of the name file as the first argument. The folder is mounted at `/work` in the container, so a path relative to it works, and the output files are written there too. `--user` makes them belong to you.
+
+```bash
+cd /path/to/my_model
+docker run --rm --user "$(id -u):$(id -g)" -v "$PWD":/work ghcr.io/spark-hydro/memdif3d rm.nam
+```
+
+Options of the program follow the path, for example `rm.nam --nperiods 1 --steps-per-period 10 --fresh`. If the model folder is somewhere else (or you want to keep it read-only), mount it as well and use the path inside the container:
+
+```bash
+docker run --rm --user "$(id -u):$(id -g)" -v "$PWD":/work -v /path/to/my_model:/model:ro \
+    ghcr.io/spark-hydro/memdif3d /model/rm.nam
+```
+
+A name file lists its package files relative to its own folder, so always mount the whole model folder, not only the `.nam` file. The image also contains an example (`/opt/memdif3d/data/reduced_matrix/rm.nam`) that you can run without any model of your own:
 
 ```bash
 docker run --rm --user "$(id -u):$(id -g)" -v "$PWD":/work ghcr.io/spark-hydro/memdif3d \
-    memdif3d /opt/memdif3d/data/reduced_matrix/rm.nam
+    /opt/memdif3d/data/reduced_matrix/rm.nam
 ```
 
-The example input set (`reduced_matrix`, files `rm.*`) is in `/opt/memdif3d/data`. For your own input set, mount its folder as well:
-
-```bash
-docker run --rm --user "$(id -u):$(id -g)" -v "$PWD":/work -v /path/to/mycase:/mycase \
-    ghcr.io/spark-hydro/memdif3d memdif3d /mycase/rm.nam
-```
-
-All options of the program work the same (`--fresh`, `--nperiods`, `--snapshot-every`, ...). Running without arguments prints the usage.
+All options of the program work the same (`--fresh`, `--nperiods`, `--snapshot-every`, ...). Running without arguments prints the usage. If the path is wrong, the container says so and tells you how to mount the folder. The older form `memdif3d rm.nam` still works.
 
 ## Make pictures and animations
 The scripts of `tools/` are on the `PATH` of the image. Run them in the folder with your output:
