@@ -13,4 +13,5 @@ The author's longer log may exist as `WORKING.md` in an Obsidian vault folder `0
 - Keep `ref_step.py`, `memdif_proto.py` and the Fortran in step: tests compare them (tolerance 1e-12).
 - Run simulations in their own folder (outputs go to the current directory); never commit `daily_output/`, GIFs or build folders.
 - Do not push, tag or publish without the user's go-ahead. Authentication: SSH key per computer.
+- Ask the user before creating a git branch: they decide between a branch and a plain commit on main. Each push needs its own go-ahead.
 - Banner and contact lines come from CMake variables `MEMDIF3D_*` in `CMakeLists.txt`.

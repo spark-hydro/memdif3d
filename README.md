@@ -14,7 +14,7 @@ Membrane diffusion in 3D: a fully mixed source cell leaks through a membrane int
 ![The model domain](docs/img/domain.png)
 
 ## Status
-Version 0.1.1. The solver reproduces the spreadsheet model to rounding error: 2e-16 over all cells after 576 steps against the full workbook, against the output of the daily macro, and against a 32,820-step state saved in the workbook (see [docs/VALIDATION.md](docs/VALIDATION.md)). Sorption, advection and the membrane holes are tested against a Python prototype and a sealed-box mass balance, but not yet against a spreadsheet run.
+Version 0.1.2. The solver reproduces the spreadsheet model to rounding error: 2e-16 over all cells after 576 steps against the full workbook, against the output of the daily macro, and against a 32,820-step state saved in the workbook (see [docs/VALIDATION.md](docs/VALIDATION.md)). Sorption, advection and the membrane holes are tested against a Python prototype and a sealed-box mass balance, but not yet against a spreadsheet run.
 
 Current limits: one source cell touching the membrane, one uniform sand and membrane, cubic cells, explicit time stepping. The notes in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) list the next steps.
 

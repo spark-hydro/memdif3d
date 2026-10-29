@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(memdif3d VERSION 0.1.1 LANGUAGES Fortran)
+project(memdif3d VERSION 0.1.2 LANGUAGES Fortran)
 
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
   set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
@@ -16,7 +16,7 @@ set(MEMDIF3D_DEPARTMENT "CECE Dept." CACHE STRING "Department shown in the banne
 set(MEMDIF3D_INSTITUTION "Texas Tech University" CACHE STRING "Institution shown in the banner")
 set(MEMDIF3D_CONTACT "seonggyu.park@ttu.edu" CACHE STRING "Contact (e-mail) shown in the banner")
 
-# a build without a git checkout (the Docker image) passes the version in: -D MEMDIF3D_GIT_TAG=v0.1.1
+# a build without a git checkout (the Docker image) passes the version in: -D MEMDIF3D_GIT_TAG=v0.1.2
 set(MEMDIF3D_GIT_TAG "" CACHE STRING "Version shown in the banner (default: git describe)")
 if(MEMDIF3D_GIT_TAG)
   set(BANNER_GIT_TAG "${MEMDIF3D_GIT_TAG}")
