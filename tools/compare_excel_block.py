@@ -31,8 +31,11 @@ def n2c(n):
     return s
 
 
+LAST_TILE = 750                    # first column of the last tile (Y = 28); 751 in Reduced_Matrix_fixed.xlsx
+
+
 def base(y):                       # first column of slice y (0-based), Reduced_Matrix layout
-    return 1 + 26 * y if y <= 6 else (157 + 27 * (y - 6) if y <= 27 else 750)
+    return 1 + 26 * y if y <= 6 else (157 + 27 * (y - 6) if y <= 27 else LAST_TILE)
 
 
 def main():
@@ -41,7 +44,11 @@ def main():
     ap.add_argument('field')
     ap.add_argument('--first-row', type=int, required=True)
     ap.add_argument('--nam', required=True)
+    ap.add_argument('--fixed-layout', action='store_true', help='the workbook is Reduced_Matrix_fixed.xlsx (last tile one column further right)')
     a = ap.parse_args()
+    global LAST_TILE
+    if a.fixed_layout:
+        LAST_TILE = 751
     m = P.Model(a.nam)
     nx, ny, nz = m.nx, m.ny, m.nz
     lo, hi = a.first_row, a.first_row + nx - 1

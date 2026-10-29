@@ -33,6 +33,17 @@ Reproduce with `memdif3d data/reduced_matrix/memdif3d.nam --nperiods 1 --steps-p
 ## 3b. The two spreadsheet irregularities
 `data/reduced_matrix_intended` removes them (docs/DEVELOPMENT.md): it is the five boundary rules without the 84 `boundary_cells` exceptions and the 861 overrides. Against the sheet-exact set: after 576 steps the source is 0.939863 against 0.939861 and the largest cell difference is 9e-3 (peak 0.75), in slice 27 near the membrane; after 28 days the source is 0.0914 against 0.0899 and the largest difference is 3e-3 (peak 0.076), at the far boundary cells that were fixed at 0. The intended set is checked against the prototype and restart by the ctest `run_reduced_matrix_intended`; it cannot be checked against Excel because the sheet contains the irregularities.
 
+## 3c. The corrected workbook (2026-10-28)
+The two irregularities were confirmed as mistakes. `tools/fix_reduced_matrix_xlsx.py` writes `Reduced_Matrix_fixed.xlsx`: the last tile moved one column to the right (so every tile is 27 columns after the previous one, and the existing formulas of tile Y = 27 point to the right cells), the 82 typed zeros replaced by `=<left neighbour>*0.82`, and the two corner cells AAS50, AAS92 given the normal formula. The original file is not changed. The checks:
+
+| check | result |
+|---|---|
+| `xlsx2memdif.py` on the corrected workbook | 0 exceptions and 0 overrides; boundary rules, faces, grid, start state and flow mask identical to `data/reduced_matrix_intended` |
+| LibreOffice recalculates the workbook's own formulas on a random concentration field; every cell compared with the prototype step of `data/reduced_matrix_intended` | max abs difference 7.8e-16 (sand cells), 6.7e-16 (boundary cells), 3.3e-16 (source); 0 cells above 1e-12 |
+| control: the original workbook, same procedure | matches `data/reduced_matrix` to 7.8e-16, but not the intended set (1,976 cells above 1e-12, up to 0.74 in the typed-zero cells and 0.048 in sand cells) |
+
+The corrected workbook has not been run with the macro in Excel; use `excel/DailyRun_fixed.bas` (blocks A6:ACU48 and A50:ACU92) in a macro-enabled copy of it.
+
 ## 4. Independent physics checks (tests/test_cases.py)
 Sealed box: mass conserved to 5e-15 and the end state equals the analytic uniform concentration V*CM0 / (V + R*Nfluid). Off-centre source with sorption, advection and neighbour overrides: Fortran equals the Python prototype to 1e-16.
 

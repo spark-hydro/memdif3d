@@ -6,6 +6,7 @@ Python scripts in `tools/`. The environment in `environment.yml` (`conda env cre
 | Script | What it does |
 |---|---|
 | `xlsx2memdif.py` | extracts a complete input set from the spreadsheet model (`python tools/xlsx2memdif.py Reduced_Matrix.xlsx data/reduced_matrix`) |
+| `fix_reduced_matrix_xlsx.py` | writes a corrected copy of `Reduced_Matrix.xlsx` (the last tile one column further right, the typed zeros replaced by formulas); the original is not changed |
 | `make_holes.py` | copies a set and punches holes in the membrane (`--pitch`, `--size`, `--offset`, `--closed`) |
 | `make_intended_set.py` | makes the Reduced_Matrix set without the two spreadsheet irregularities |
 | `convert_input.py` | converts the older list formats of faces and boundary to the faces map and boundary rules |
@@ -40,4 +41,4 @@ memdif3d data/reduced_matrix/memdif3d.nam --nperiods 1 --steps-per-period 576 --
 python tools/compare_excel_block.py 3d_nonzeroboundry.xlsx field_001.csv --first-row 50694 --nam data/reduced_matrix/memdif3d.nam
 ```
 
-`--first-row` is the first sheet row of the 43-row block; for a `Day_NNN.xlsx` file of the daily macro it is 6.
+`--first-row` is the first sheet row of the 43-row block; for a `Day_NNN.xlsx` file of the daily macro it is 6. For files made from the corrected workbook add `--fixed-layout`.
