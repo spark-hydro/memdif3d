@@ -37,7 +37,11 @@ markdown_extensions:
   - pymdownx.arithmatex:
       generic: true
   - pymdownx.highlight
-  - pymdownx.superfences
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
   - pymdownx.details
 
 extra_javascript:
@@ -54,6 +58,9 @@ nav:
       - Theory: theory.md
       - Limits and FAQ: faq.md
       - Model specification (reference): MODEL_SPEC.md
+  - How it works:
+      - The Fortran program: how-fortran.md
+      - The Excel macro: how-macro.md
   - Using memdif3d:
       - Input files: INPUT_SPEC.md
       - Output files: outputs.md
