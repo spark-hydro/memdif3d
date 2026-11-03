@@ -97,7 +97,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # full: latest and 0.4.0;  slim: slim and 0.4.0-slim
+      # full: latest and 0.4.1;  slim: slim and 0.4.1-slim
       - id: tags
         run: |
           V="${GITHUB_REF_NAME#v}"
