@@ -23,23 +23,24 @@ from matplotlib.animation import FuncAnimation, PillowWriter
 from matplotlib.patches import Rectangle
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from animate_field import read_field  # noqa: E402
+from animate_field import load_frames  # noqa: E402
 import memdif_proto as P              # noqa: E402
 
 
 def load(run, nam, pattern, every):
-    files = sorted(glob.glob(os.path.join(run, pattern)))[::max(every, 1)]
+    files = sorted(glob.glob(os.path.join(run, pattern)))
     if not files:
         sys.exit(f'no files {pattern} in {run}')
-    frames = [read_field(f) for f in files]
     m = P.Model(nam)
+    frames = load_frames(files, every, m.cm0)
     ny, nx, nz = frames[0][0].shape
     hidden = np.ones((ny, nx, nz), bool)
     c0 = np.zeros((ny, nx, nz))
     for (x, iy, iz), code in m.idom.items():
         hidden[iy - 1, x - 1, iz - 1] = code != 1
         c0[iy - 1, x - 1, iz - 1] = m.c0[(x, iy, iz)]
-    frames.insert(0, (c0, dict(period=0, step=0, minutes=0.0, cm=m.cm0)))
+    if frames[0][1]['step'] != 0:
+        frames.insert(0, (c0, dict(period=0, step=0, minutes=0.0, cm=m.cm0)))
     return m, frames, hidden
 
 

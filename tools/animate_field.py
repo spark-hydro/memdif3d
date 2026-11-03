@@ -12,7 +12,9 @@ Views (axis names follow docs/MODEL_SPEC.md: X = rows = IROW, Y = slices = ILAY,
         cells touching the membrane); the white dashed box is the source footprint.
   side  a section through the source: --side-plane xz (default, one slice = one tile of the
         spreadsheet) or yz. The source cell is drawn as an extra column on the left.
-Frames are the field_*.csv files of RUN_DIR (one per period); with --nam the initial state is
+Frames are the field_*.csv files of RUN_DIR (one per period) or, with --pattern 'day_*.txt', every minute of the
+day files (the MINUTES output; --every N keeps every N-th minute; the source concentration is read from the
+probes_NNN.csv next to them); with --nam the initial state is
 added as the first frame. Solid cells are grey; boundary cells are hidden unless --show-boundary.
 """
 import argparse
@@ -59,6 +61,97 @@ def read_field(path):
     return np.array(rows), info                       # [ICOL, IROW, ILAY] = [ILAY, IROW, ICOL]
 
 
+def layer_set(txt):
+    """'1-5,9' -> [1, 2, 3, 4, 5, 9]"""
+    out = []
+    for part in txt.split(','):
+        lo, _, hi = part.partition('-')
+        out.extend(range(int(lo), int(hi or lo) + 1))
+    return out
+
+
+def is_day_file(path):
+    """True for the minutes output (day_NNN.txt / .csv: first line '# STEP ...')"""
+    with open(path) as fh:
+        return fh.readline().startswith('# STEP')
+
+
+def probe_series(path):
+    """{step: source concentration} from the probes file next to a day file (day_001.txt -> probes_001.csv)"""
+    m = re.match(r'day_(\d+)\.', os.path.basename(path))
+    probe = os.path.join(os.path.dirname(path), f'probes_{m.group(1)}.csv') if m else None
+    if not probe or not os.path.exists(probe):
+        sys.exit(f'{path}: the source concentration is not in a day file. Keep {os.path.basename(probe or "probes_NNN.csv")} '
+                 'next to it (PROBES with a SOURCE line in the OC file).')
+    out = {}
+    with open(probe) as fh:
+        head = fh.readline().strip().split(',')
+        col = head.index('SOURCE')
+        for line in fh:
+            t = line.split(',')
+            out[int(t[0])] = float(t[col])
+    return out
+
+
+def read_day_frames(path, every=1, cm0=None):
+    """All frames of a day file (the MINUTES output, text or csv, layers side by side or one tile per layer).
+    Only steps divisible by `every` are parsed. -> list of (array[ILAY, IROW, ICOL], dict(period, step, minutes, cm));
+    the source concentration cm comes from the probes file next to it (cm0 for step 0)."""
+    cm = probe_series(path)
+    period = int(re.match(r'day_(\d+)\.', os.path.basename(path)).group(1))
+    head = re.compile(r'# STEP (\d+) TIME (\S+) (?:LAYERS (\S+)|ILAY (\d+)) NROW (\d+) NCOL (\d+)')
+    frames, rows, cur, lays, tiles = [], [], None, [], {}
+
+    def finish():
+        if cur is None or not (rows or tiles):
+            return
+        step, time, ncol = cur
+        if tiles:                                      # one tile per layer
+            arr = np.array([tiles[k] for k in sorted(tiles)])
+        else:                                          # layers side by side
+            arr = np.array(rows).reshape(len(rows), len(lays), ncol).transpose(1, 0, 2)
+        c = cm.get(step, cm0 if cm0 is not None else cm.get(1))
+        frames.append((arr, dict(period=period, step=step, minutes=time, cm=c, layers=sorted(lays) if not tiles else sorted(tiles))))
+
+    keep, tile_rows, tile_no = False, [], 0
+    with open(path) as fh:
+        for line in fh:
+            if line.startswith('#'):
+                mt = head.match(line)
+                if not mt:
+                    continue                           # the layer label line
+                step = int(mt.group(1))
+                if cur is None or step != cur[0]:
+                    finish()
+                    rows, tiles = [], {}
+                    cur = (step, float(mt.group(2)), int(mt.group(6)))
+                    keep = (step % max(every, 1) == 0)
+                if mt.group(3):
+                    lays = layer_set(mt.group(3))
+                else:
+                    tile_no = int(mt.group(4))
+                    tile_rows = []
+                    if keep:
+                        tiles[tile_no] = tile_rows
+                continue
+            if keep and line.strip():
+                v = np.fromstring(line.replace(',', ' '), sep=' ')
+                (tile_rows if tiles else rows).append(v)
+    finish()
+    return frames
+
+
+def load_frames(files, every=1, cm0=None):
+    """The frames of the given files. field_*.csv / snap_*.csv: one frame per file, every n-th file.
+    day_*.txt / .csv: all minutes of the files, every n-th step (step 0 is kept)."""
+    if files and is_day_file(files[0]):
+        frames = []
+        for f in files:
+            frames += read_day_frames(f, every, cm0)
+        return frames
+    return [read_field(f) for f in files[::max(every, 1)]]
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument('run_dir', help='folder with field_*.csv')
@@ -84,10 +177,15 @@ def main():
     if not (a.face or a.side):
         sys.exit('nothing to draw: switch at least one of --face / --side on')
 
-    files = sorted(glob.glob(os.path.join(a.run_dir, a.pattern)))[::max(a.every, 1)]
+    files = sorted(glob.glob(os.path.join(a.run_dir, a.pattern)))
     if not files:
         sys.exit(f'no files {a.pattern} in {a.run_dir}')
-    frames = [read_field(f) for f in files]
+    cm0 = None
+    if a.nam:
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        import memdif_proto as P0
+        cm0 = P0.Model(a.nam).cm0
+    frames = load_frames(files, a.every, cm0)
     ny, nx, nz = frames[0][0].shape
 
     # geometry from the input files (optional)
@@ -106,7 +204,7 @@ def main():
         c0 = np.zeros((ny, nx, nz))
         for (x, iy, iz), v in m.c0.items():
             c0[iy - 1, x - 1, iz - 1] = v
-        if not a.no_initial:
+        if not a.no_initial and frames[0][1]['step'] != 0:
             frames.insert(0, (c0, dict(period=0, step=0, minutes=0.0, cm=m.cm0)))
     if a.face_z is None:
         a.face_z = 1

@@ -10,7 +10,9 @@ pan; the Play button and the slider run the time series and the view stays where
 Axes (mm): x = distance from the membrane (ICOL), y = IROW (rows), z = ILAY (columns). The source cell is the
 slab at x < 0 coloured by its concentration. Little squares at the membrane plane mark the faces:
 grey = membrane, red = hole, black = closed. Solid and boundary cells are not drawn.
-Frames are the field_*.csv files (one per period); the initial state is added as the first frame.
+Frames are the field_*.csv files (one per period) or, with --pattern 'day_*.txt', every minute of the day files
+(the MINUTES output; --every 60 keeps one frame an hour; probes_NNN.csv must be next to them for the source
+concentration). The initial state is added as the first frame.
 
 Needs: numpy, plotly   (pip install numpy plotly)
 """
@@ -26,7 +28,7 @@ except ImportError as e:                       # pragma: no cover
     sys.exit(f'animate_3d.py needs numpy and plotly ({e}). Install: pip install numpy plotly')
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from animate_field import read_field           # noqa: E402
+from animate_field import load_frames          # noqa: E402
 import memdif_proto as P                       # noqa: E402
 
 
@@ -47,11 +49,11 @@ def main():
     ap.add_argument('--frame-ms', type=int, default=400, help='display time of one frame in the player')
     a = ap.parse_args()
 
-    files = sorted(glob.glob(os.path.join(a.run_dir, a.pattern)))[::max(a.every, 1)]
+    files = sorted(glob.glob(os.path.join(a.run_dir, a.pattern)))
     if not files:
         sys.exit(f'no files {a.pattern} in {a.run_dir}')
-    frames = [read_field(f) for f in files]
     m = P.Model(a.nam)
+    frames = load_frames(files, a.every, m.cm0)
     ny, nx, nz = frames[0][0].shape
     if (m.nx, m.ny, m.nz) != (nx, ny, nz):
         sys.exit('name file and field files have different grid sizes')
@@ -60,7 +62,7 @@ def main():
     for (x, iy, iz), v in m.c0.items():
         c0[iy - 1, x - 1, iz - 1] = v
         fluid[iy - 1, x - 1, iz - 1] = m.idom[(x, iy, iz)] == 1
-    if not a.no_initial:
+    if not a.no_initial and frames[0][1]['step'] != 0:
         frames.insert(0, (c0, dict(period=0, step=0, minutes=0.0, cm=m.cm0)))
 
     # crop to the fluid cells; the grid is [ILAY, IROW, ICOL]

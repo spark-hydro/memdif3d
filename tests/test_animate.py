@@ -37,4 +37,43 @@ with tempfile.TemporaryDirectory() as d:
                        capture_output=True, text=True)
     if r.returncode == 0:
         sys.exit('FAIL: both views off must be refused')
+
+# ---- day files (MINUTES output) as animation frames
+import glob  # noqa: E402
+import re    # noqa: E402
+import shutil  # noqa: E402
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'tools'))
+import animate_field as AF  # noqa: E402
+
+with tempfile.TemporaryDirectory() as d, tempfile.TemporaryDirectory() as md:
+    for f in glob.glob(os.path.join(os.path.dirname(nam), '*')):
+        shutil.copy(f, md)
+    oc = [f for f in os.listdir(md) if f.endswith('.oc')][0]
+    txt = open(os.path.join(md, oc)).read()
+    txt = re.sub(r'(?i)begin options', 'BEGIN options\n  SNAPSHOT FILEOUT snap_{step}.csv EVERY 10', txt, count=1)
+    open(os.path.join(md, oc), 'w').write(txt + '\nBEGIN MINUTES\n  DIGITS 16\nEND MINUTES\n')
+    mnam = os.path.join(md, os.path.basename(nam))
+    r = subprocess.run([exe, mnam, '--nperiods', '3', '--steps-per-period', '10', '--fresh'], cwd=d, capture_output=True, text=True)
+    if r.returncode != 0:
+        sys.exit('FAIL: memdif3d run (MINUTES) failed\n' + r.stdout + r.stderr)
+    days = sorted(glob.glob(os.path.join(d, 'day_*.txt')))
+    got = AF.load_frames(days, every=10)
+    snaps = sorted(glob.glob(os.path.join(d, 'snap_*.csv')))
+    ref = [AF.read_field(f) for f in snaps]
+    steps = [g[1]['step'] for g in got]
+    if steps != [0, 10, 20, 30]:
+        sys.exit(f'FAIL: day-file frames at steps {steps}, expected [0, 10, 20, 30]')
+    for g, (arr, info) in zip(got[1:], ref):
+        if g[1]['step'] != info['step'] or not numpy.array_equal(g[0], arr) or abs(g[1]['cm'] - info['cm']) > 1e-15:
+            sys.exit(f"FAIL: day-file frame at step {info['step']} differs from the snapshot file")
+    print('day files: frames equal the snapshot files')
+    out = os.path.join(d, 'days.gif')
+    r = subprocess.run([sys.executable, script, d, '--nam', mnam, '--pattern', 'day_*.txt', '--every', '10', '--out', out, '--dpi', '40'],
+                       capture_output=True, text=True)
+    if r.returncode != 0 or not os.path.exists(out):
+        sys.exit('FAIL: animate_field.py with day files failed\n' + r.stdout + r.stderr)
+    n = Image.open(out).n_frames
+    print(f'day files: {n} frames')
+    if n != 4:
+        sys.exit(f'FAIL: expected 4 frames from the day files, got {n}')
 print('PASS')

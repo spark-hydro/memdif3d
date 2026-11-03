@@ -27,6 +27,12 @@ python tools/animate_compare.py runA runB --nam-a A/rm.nam --nam-b B/rm.nam --pa
 
 For finer frames than one per day, run with `--snapshot-every 60` and animate the `snap_*.csv` files with `--pattern`.
 
+The minutes output can be animated directly: `--pattern 'day_*.txt'` (or `'day_*.csv'`) uses every minute of the day files as frames, and `--every N` keeps every N-th minute (`--every 60` is one frame an hour; the whole day at once would make a huge page). The source concentration is not in a day file, so keep `probes_NNN.csv` (with a `SOURCE` line) next to them. The day files must hold all layers.
+
+```bash
+python tools/animate_3d.py run1 --nam data/reduced_matrix/rm.nam --log --pattern 'day_*.txt' --every 60 --out solute3d.html
+```
+
 ## Checking
 | Script | What it does |
 |---|---|
