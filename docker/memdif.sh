@@ -4,7 +4,8 @@
 # Put this file next to your model folder (default: ./mymodel next to this script) and run it from the run folder:
 #   cd run1 && ../memdif.sh run
 # The model folder is linked read-only as /model, the current folder as /work (the output goes there).
-# Set MEMDIF_MODEL to use another model folder, MEMDIF_IMAGE to use another image.
+# Set MEMDIF_MODEL to use another model folder (any path), MEMDIF_NAM to choose the name file when the folder holds
+# several .nam files (default: the only one, or the first), MEMDIF_IMAGE to use another image.
 # Every command prints the long docker command it runs.
 IMG="${MEMDIF_IMAGE:-ghcr.io/spark-hydro/memdif3d:latest}"
 HERE="$(cd "$(dirname "$0")" && pwd)"
@@ -35,9 +36,9 @@ dock() {
 }
 
 nam() {
-  NAM=$(ls "$MODEL"/*.nam 2>/dev/null | head -n 1)
-  if [ -z "$NAM" ]; then
-    echo "memdif: no .nam file in $MODEL (set MEMDIF_MODEL, or run: memdif newmodel)" >&2
+  if [ -n "$MEMDIF_NAM" ]; then NAM="$MODEL/$MEMDIF_NAM"; else NAM=$(ls "$MODEL"/*.nam 2>/dev/null | head -n 1); fi
+  if [ -z "$NAM" ] || [ ! -f "$NAM" ]; then
+    echo "memdif: no name file found in $MODEL (set MEMDIF_MODEL and MEMDIF_NAM, or run: memdif newmodel)" >&2
     exit 2
   fi
   NAM=/model/$(basename "$NAM")

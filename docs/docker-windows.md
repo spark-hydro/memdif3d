@@ -161,6 +161,23 @@ END MINUTES
 
 This gives `day_001.csv` with the first two hours. A whole day of the whole box is about 640 MB, so choose a window. The format is described in [Output files](outputs.md).
 
+### 4.5 Use a model that is somewhere else
+
+The model does not have to be in `mymodel`. Point the helper at any folder, and name the main name file if the folder holds several `.nam` files. For one PowerShell window:
+
+```powershell
+$env:MEMDIF_MODEL = "D:\projects\my_other_model"
+$env:MEMDIF_NAM = "case2.nam"
+```
+
+Then `..\memdif.cmd run` runs `case2.nam` from that folder. Without `MEMDIF_NAM` the helper takes the only `.nam` file of the folder (or the first one). Give the **whole model folder**, not only the name file: the name file lists the other input files relative to its own folder, so they must be next to it. The results still go to the run folder you are in.
+
+Without the helper the same thing is one `docker run`, with the folder linked as `/model` and the path of the name file inside the container:
+
+```powershell
+docker run --rm -v "${PWD}:/work" -v "D:\projects\my_other_model:/model:ro" ghcr.io/spark-hydro/memdif3d /model/case2.nam
+```
+
 ## 5. Run the model
 
 Go to the run folder and run:

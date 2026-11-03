@@ -5,7 +5,8 @@ rem Put this file next to your model folder (default: mymodel next to this file)
 rem    cd %USERPROFILE%\memdif3d\run1
 rem    ..\memdif run
 rem The model folder is linked read-only as /model, the current folder as /work (the output goes there).
-rem Set MEMDIF_MODEL to use another model folder, MEMDIF_IMAGE to use another image.
+rem Set MEMDIF_MODEL to use another model folder (any path), MEMDIF_NAM to choose the name file when the folder
+rem holds several .nam files (default: the first one), MEMDIF_IMAGE to use another image.
 rem Every command prints the long docker command it runs. Works in PowerShell and in cmd.
 setlocal EnableExtensions
 if "%MEMDIF_IMAGE%"=="" (set "IMG=ghcr.io/spark-hydro/memdif3d:latest") else (set "IMG=%MEMDIF_IMAGE%")
@@ -27,8 +28,10 @@ if /i "%CMD%"=="update" goto update
 if /i "%CMD%"=="newmodel" goto newmodel
 if /i "%CMD%"=="tool" goto tool
 if /i "%CMD%"=="version" goto version
-set "NAM="
+set "NAM=%MEMDIF_NAM%"
+if defined NAM goto havenam
 for %%f in ("%MODEL%\*.nam") do if not defined NAM set "NAM=%%~nxf"
+:havenam
 if not defined NAM goto nonam
 if /i "%CMD%"=="run" goto run
 if /i "%CMD%"=="view" goto view
