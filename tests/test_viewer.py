@@ -97,6 +97,26 @@ with tempfile.TemporaryDirectory() as d, tempfile.TemporaryDirectory() as md:
     fields = [AF.read_field(f) for f in sorted(glob.glob(os.path.join(d, 'field_*.csv')))]
     check((meta, idom, v), fields, 'field files', first=1)
 
+    # probes: the series of the probe files (start state first), dots at the frames
+    pr = meta['probes']
+    if pr is None or pr['names'] != ['SOURCE', '15_22_1', '15_22_6'] or pr['loc'][0] is not None or pr['loc'][1] != [15, 22, 1]:
+        fail('the probes of the page are not those of the probe files')
+    pt = np.frombuffer(zlib.decompress(base64.b64decode(pr['t'])), '<f4')
+    pv = np.frombuffer(zlib.decompress(base64.b64decode(pr['v'])), '<f4').reshape(pr['n'], 3)
+    rows = []
+    for f in sorted(glob.glob(os.path.join(d, 'probes_*.csv'))):
+        rows += [[float(x) for x in line.split(',')] for line in open(f).read().strip().splitlines()[1:]]
+    rows = np.array(rows)
+    if pr['n'] != len(rows) + 1 or pt[0] != 0 or abs(pv[0, 0] - meta['cm'][0]) > 1e-6:
+        fail('the probe series must be the start state plus every minute of the files')
+    if np.abs(pt[1:] - rows[:, 1]).max() > 1e-3 or np.abs(pv[1:] - rows[:, 2:]).max() > 1e-6:
+        fail('the probe values of the page differ from the probe files')
+    print(f'probes: {pr["n"]} points x 3 probes equal the probe files')
+    # a page without probes
+    run([sys.executable, script, d, '--nam', mnam, '--no-probes', '--out', out], d)
+    if read_page(out)[0]['probes'] is not None:
+        fail('--no-probes must leave the probes out')
+
     # day files with a time window (steps 10, 20, 30 equal the snapshot files)
     run([sys.executable, script, d, '--nam', mnam, '--pattern', 'day_*.txt', '--every', '10', '--from', '10', '--to', '30', '--out', out], d)
     meta, idom, v, _ = read_page(out)

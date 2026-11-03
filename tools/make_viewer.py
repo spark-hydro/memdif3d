@@ -14,6 +14,10 @@ number in the page, without running anything again:
   Column  one ICOL, rows x layers            (column plane, MODFLOW yz; ICOL = 1 touches the membrane)
 The source concentration is drawn as column 0 next to the membrane. Linear or logarithmic colours, the top of the
 colour scale and the play speed can be changed in the page.
+Lower left: the probes. The files probes_*.csv of RUN_DIR (the cells and the source written every minute) are drawn
+as concentration against time, a line for every probe with a dot at every frame of the animation, and a vertical
+line at the time shown; a drop-down chooses one probe or all of them. The probe cells are marked in the 3D domain.
+--probes PATTERN changes the file pattern (default 'probes*.csv'), --no-probes leaves them out.
 
 Frames are the files of RUN_DIR that --pattern matches: field_*.csv (one per day, default), snap_*.csv, or the
 minutes output day_*.txt / day_*.csv (--every N keeps every N-th minute; --from / --to give a time window in
@@ -50,6 +54,36 @@ def pack(raw):
     return base64.b64encode(zlib.compress(bytes(raw), 6)).decode('ascii')
 
 
+def read_probes(run_dir, pattern, tfrom, tto):
+    """probe files of a run -> (names, time[n], value[n, nprobe]) or None; later files continue earlier ones"""
+    names, rows = None, {}
+    for f in sorted(glob.glob(os.path.join(run_dir, pattern))):
+        with open(f) as fh:
+            head = fh.readline().strip().split(',')
+            if len(head) < 3 or head[:2] != ['step', 'time']:
+                continue
+            if names is None:
+                names = head[2:]
+            elif head[2:] != names:
+                sys.exit(f'{f}: the probe columns differ from those of the first probe file')
+            for line in fh:
+                t = line.strip().split(',')
+                if len(t) == len(head):
+                    rows[int(t[0])] = [float(x) for x in t[1:]]
+    if not names or not rows:
+        return None
+    arr = np.array([rows[k] for k in sorted(rows)])
+    time, val = arr[:, 0], arr[:, 1:]
+    keep = np.ones(len(time), bool)
+    if tfrom is not None:
+        keep &= time >= tfrom
+    if tto is not None:
+        keep &= time <= tto
+    if not keep.any():
+        return None
+    return names, time[keep], val[keep]
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument('run_dir', nargs='?', default=None, help='folder with the result files (omit for the domain only)')
@@ -60,6 +94,8 @@ def main():
     ap.add_argument('--from', dest='tfrom', type=float, default=None, help='first minute shown (1 day = 1440)')
     ap.add_argument('--to', dest='tto', type=float, default=None, help='last minute shown')
     ap.add_argument('--no-initial', action='store_true', help='do not add the start state as the first frame')
+    ap.add_argument('--probes', default='probes*.csv', help='probe files in RUN_DIR (default probes*.csv)')
+    ap.add_argument('--no-probes', action='store_true', help='leave the probe panel out')
     a = ap.parse_args()
 
     m = P.Model(a.nam)
@@ -82,6 +118,25 @@ def main():
     if not a.no_initial and not a.tfrom and (not frames or frames[0][1]['step'] != 0):
         frames.insert(0, (c0, dict(period=0, step=0, minutes=0.0, cm=m.cm0)))
     nf = len(frames)
+
+    probes = None
+    if a.run_dir and not a.no_probes:
+        pr = read_probes(a.run_dir, a.probes, a.tfrom, a.tto)
+        if pr:
+            names, ptime, pval = pr
+            locs = []
+            for n in names:
+                parts = n.split('_')
+                locs.append([int(x) for x in parts] if len(parts) == 3 and all(x.isdigit() for x in parts) else None)
+            if not a.no_initial and not a.tfrom:                     # the start state belongs to the probes too
+                row0 = [m.cm0 if l is None else float(c0[l[0] - 1, l[1] - 1, l[2] - 1]) for l in locs]
+                ptime, pval = np.insert(ptime, 0, 0.0), np.vstack([row0, pval])
+            stride = max(1, len(ptime) // 100000)                    # at most about 100,000 points per probe
+            if stride > 1:
+                print(f'note: the probe series is thinned to every {stride}th point')
+                ptime, pval = ptime[::stride], pval[::stride]
+            probes = dict(names=names, loc=locs, n=int(len(ptime)),
+                          t=pack(ptime.astype('<f4').tobytes()), v=pack(np.ascontiguousarray(pval).astype('<f4').tobytes()))
 
     # concentrations as 16-bit numbers on a logarithmic scale: q = 0 means "below the floor" (zero)
     vmax = max(float(f[0][fluid].max()) for f in frames)
@@ -108,14 +163,15 @@ def main():
         foot=[[ir, il] for ir, il in foot],
         counts=dict(fluid=int(fluid.sum()), boundary=int((idom == 2).sum()), solid=int((idom == 0).sum())),
         title=os.path.basename(a.nam),
-        idom=pack(idom.tobytes()), frames=pack(q.tobytes()))
+        probes=probes, idom=pack(idom.tobytes()), frames=pack(q.tobytes()))
     html = (TEMPLATE.replace('__TITLE__', 'memdif3d viewer: ' + os.path.basename(a.nam))
             .replace('__META__', json.dumps(meta, separators=(',', ':')))
             .replace('__PLOTLY__', get_plotlyjs()))
     with open(a.out, 'w', encoding='utf-8') as fh:
         fh.write(html)
     t = meta['minutes']
-    print(f'{nf} frame{"s" if nf != 1 else ""} (minute {t[0]:g} to {t[-1]:g}), grid {ny} x {nx} x {nz} -> {a.out} '
+    pn = f', {len(probes["names"])} probes' if probes else ''
+    print(f'{nf} frame{"s" if nf != 1 else ""} (minute {t[0]:g} to {t[-1]:g}){pn}, grid {ny} x {nx} x {nz} -> {a.out} '
           f'({os.path.getsize(a.out) / 1e6:.1f} MB)')
     if os.path.getsize(a.out) > 100e6:
         print('warning: the page is very large; use --every, --from and --to to keep fewer frames')
@@ -134,9 +190,11 @@ header{padding:10px 16px 0}h1{font-size:18px;margin:0 0 2px;font-weight:600}.sub
 select,input,button{font:inherit;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:3px 6px}
 button{cursor:pointer;padding:3px 12px}input[type=range]{padding:0;accent-color:var(--acc)}input[type=number]{width:5.5em}
 .val{min-width:7em;color:var(--mut)}
-.panels{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:8px 8px 16px}
-.panel{background:var(--card);border:1px solid var(--line);border-radius:10px;min-height:600px}
-@media (max-width:1000px){.panels{grid-template-columns:1fr}}
+.panels{display:grid;grid-template-columns:1fr 1fr;grid-template-areas:"s p" "q p";gap:8px;padding:8px 8px 16px}
+.panels.noprobe{grid-template-areas:"s p"}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:10px;min-height:360px}
+#scene{grid-area:s}#plane2d{grid-area:p}#probes{grid-area:q}
+@media (max-width:1000px){.panels{grid-template-columns:1fr;grid-template-areas:"s" "p" "q"}.panels.noprobe{grid-template-areas:"s" "p"}}
 #msg{padding:30px;text-align:center;color:var(--mut)}
 </style></head><body>
 <header><h1 id="title"></h1><div class="sub" id="sub"></div></header>
@@ -146,12 +204,13 @@ button{cursor:pointer;padding:3px 12px}input[type=range]{padding:0;accent-color:
  <label>Time <input type="range" id="tsl" min="0" max="0" value="0" style="width:200px"><span class="val" id="tlab"></span></label>
  <button id="play">Play</button>
  <label>Speed <select id="speed"><option value="900">slow</option><option value="400" selected>normal</option><option value="150">fast</option></select></label>
- <label>Colours <select id="scale"><option value="log">logarithmic</option><option value="lin">linear</option></select></label>
+ <label>Scale <select id="scale"><option value="log">logarithmic</option><option value="lin">linear</option></select></label>
  <label>Top of scale <input type="number" id="vmax" step="any"></label>
  <label><input type="checkbox" id="showbnd">boundary and solid cells</label>
+ <label id="probelab" style="display:none">Probes <select id="probesel"></select></label>
 </div>
 <div id="msg">Loading the data ...</div>
-<div class="panels" style="display:none" id="panels"><div class="panel" id="scene"></div><div class="panel" id="plane2d"></div></div>
+<div class="panels" style="display:none" id="panels"><div class="panel" id="scene"></div><div class="panel" id="plane2d"></div><div class="panel" id="probes"></div></div>
 <script>__PLOTLY__</script>
 <script type="application/json" id="meta">__META__</script>
 <script>
@@ -166,16 +225,22 @@ async function inflate(b64){
   const buf=await new Response(new Blob([u8]).stream().pipeThrough(ds)).arrayBuffer();
   return new Uint8Array(buf);
 }
-let IDOM, Q;
+let IDOM, Q, PRT=null, PRV=null;
 try{
   IDOM = await inflate(META.idom);
   const raw = await inflate(META.frames);
   Q = new Uint16Array(raw.buffer, raw.byteOffset, raw.byteLength/2);
+  if(META.probes){
+    const a=await inflate(META.probes.t), b=await inflate(META.probes.v);
+    PRT=new Float32Array(a.buffer,a.byteOffset,a.byteLength/4); PRV=new Float32Array(b.buffer,b.byteOffset,b.byteLength/4);
+  }
 }catch(e){
   $('msg').textContent='This page needs a current browser (Chrome, Edge, Firefox or Safari 16.4 or newer): '+e;
   return;
 }
 $('msg').style.display='none'; $('panels').style.display='grid';
+const PR=META.probes, HP=PR?968:600;
+if(!PR){$('probes').style.display='none';$('panels').classList.add('noprobe');}
 const LUT=new Float64Array(65536);
 for(let q=1;q<65536;q++) LUT[q]=Math.pow(10, LO+(q-1)/65534*(HI-LO));
 const FOOT=new Set(META.foot.map(p=>p[0]+','+p[1]));
@@ -212,6 +277,11 @@ for(const k of [1,2,3]){
 }
 const bx=[],by=[],bz=[],bc=[];
 for(let il=1;il<=NL;il++)for(let ir=1;ir<=NR;ir++)for(let ic=1;ic<=NC;ic++){const c=IDOM[idx(il,ir,ic)]; if(c!==1){bx.push(ic);by.push(ir);bz.push(il);bc.push(c===0?'#555555':'#7aa7d9');}}
+if(PR){
+  const pl=PR.loc.map((l,k)=>l?{l,n:PR.names[k]}:null).filter(x=>x);
+  if(pl.length) tr.push({type:'scatter3d',mode:'markers',x:pl.map(o=>o.l[2]),y:pl.map(o=>o.l[1]),z:pl.map(o=>o.l[0]),text:pl.map(o=>o.n),
+    marker:{size:5,color:'#d4537e',symbol:'diamond'},name:'probe cells',hovertemplate:'probe %{text}<extra></extra>'});
+}
 const iB=tr.length; tr.push({type:'scatter3d',mode:'markers',x:bx,y:by,z:bz,marker:{size:2,color:bc,opacity:.35},name:'boundary / solid cells',hoverinfo:'skip',visible:false});
 const iP=tr.length; tr.push({type:'mesh3d',x:[0,0,0,0],y:[0,0,0,0],z:[0,0,0,0],i:[0,0],j:[1,2],k:[2,3],color:'#0f766e',opacity:.45,name:'chosen plane',hoverinfo:'skip',showlegend:true});
 Plotly.newPlot('scene',tr,{paper_bgcolor:'rgba(0,0,0,0)',font:{color:fg},margin:{l:0,r:0,t:30,b:0},height:600,legend:{x:0,y:1},
@@ -250,11 +320,12 @@ function draw(){
   const cb=log?{tickvals:[-4,-3,-2,-1,0].map(d=>Math.log10(vmax)+d),ticktext:[-4,-3,-2,-1,0].map(d=>(vmax*Math.pow(10,d)).toPrecision(2)),title:{text:'concentration'}}:{title:{text:'concentration'}};
   const trace={type:'heatmap',x:p.xs,y:p.ys,z:zz,customdata:p.z,colorscale:'Viridis',zmin:log?Math.log10(vmin):0,zmax:log?Math.log10(vmax):vmax,
     zsmooth:false,hoverongaps:false,colorbar:cb,hovertemplate:p.xl.split(' ')[0]+' %{x}, '+p.yl+' %{y}<br>C = %{customdata:.4g}<extra></extra>'};
-  Plotly.react('plane2d',[trace],{paper_bgcolor:'rgba(0,0,0,0)',plot_bgcolor:'#c8c8c8',font:{color:fg},height:600,margin:{l:55,r:10,t:40,b:50},
+  Plotly.react('plane2d',[trace],{paper_bgcolor:'rgba(0,0,0,0)',plot_bgcolor:'#c8c8c8',font:{color:fg},height:HP,margin:{l:55,r:10,t:40,b:50},
     title:{text:NAME[t]+k+' &nbsp; minute '+META.minutes[fr]+day(META.minutes[fr])+', source = '+META.cm[fr].toPrecision(4),font:{size:13}},
     xaxis:{title:p.xl,constrain:'domain',range:t==='column'?[.5,NR+.5]:[-.5,NC+.5]},
     yaxis:{title:p.yl,scaleanchor:'x',constrain:'domain',range:t==='layer'?[.5,NR+.5]:[.5,NL+.5]}},{responsive:true});
   $('tlab').textContent='minute '+META.minutes[fr]+day(META.minutes[fr]);
+  markTime();
 }
 function syncPlane(){
   const t=$('ptype').value; $('plab').textContent=LAB[t];
@@ -265,13 +336,37 @@ $('ptype').onchange=syncPlane;
 $('pidx').oninput=()=>{sel[$('ptype').value]=+$('pidx').value;$('pnum').value=$('pidx').value;movePlane();draw();};
 $('pnum').onchange=()=>{let v=Math.max(1,Math.min(LIM[$('ptype').value],Math.round(+$('pnum').value||1)));sel[$('ptype').value]=v;$('pnum').value=v;$('pidx').value=v;movePlane();draw();};
 $('tsl').oninput=()=>{fr=+$('tsl').value;draw();};
-$('scale').onchange=draw; $('vmax').onchange=draw;
+$('scale').onchange=()=>{draw();probeScale();}; $('vmax').onchange=draw;
 $('showbnd').onchange=()=>Plotly.restyle('scene',{visible:$('showbnd').checked},[iB]);
 function step(){fr=(fr+1)%NF;$('tsl').value=fr;draw();}
 function stop(){if(timer){clearInterval(timer);timer=null;} $('play').textContent='Play';}
 $('play').onclick=()=>{if(timer){stop();return;} $('play').textContent='Pause';timer=setInterval(step,+$('speed').value);};
 $('speed').onchange=()=>{if(timer){clearInterval(timer);timer=setInterval(step,+$('speed').value);}};
 window.__viewer={sel,get fr(){return fr;},setFrame:i=>{fr=i;$('tsl').value=i;draw();},NF};
+
+// ---- probes: concentration against time ----
+const PAL=['#0f766e','#b45309','#7c3aed','#d4537e','#378add','#639922','#e24b4a','#5f5e5a'];
+function markTime(){ if(PR) Plotly.relayout('probes',{'shapes[0].x0':META.minutes[fr],'shapes[0].x1':META.minutes[fr]}); }
+function probeScale(){ if(PR) Plotly.relayout('probes',{'yaxis.type':$('scale').value==='log'?'log':'linear'}); }
+if(PR){
+  const NP=PR.names.length, N=PR.n, ptr=[];
+  const fi=META.minutes.map(t=>{let a=0,b=N-1;while(b-a>1){const m=(a+b)>>1;if(PRT[m]<=t)a=m;else b=m;}return Math.abs(PRT[a]-t)<=Math.abs(PRT[b]-t)?a:b;});
+  for(let k=0;k<NP;k++){
+    const y=new Float32Array(N); for(let j=0;j<N;j++) y[j]=PRV[j*NP+k];
+    const c=PAL[k%PAL.length], nm=PR.names[k], ht=nm+': %{y:.4g} at minute %{x}<extra></extra>';
+    ptr.push({type:'scattergl',mode:'lines',x:PRT,y:y,name:nm,legendgroup:nm,line:{color:c,width:1.6},hovertemplate:ht});
+    ptr.push({type:'scatter',mode:'markers',x:fi.map(j=>PRT[j]),y:fi.map(j=>y[j]),name:nm,legendgroup:nm,showlegend:false,marker:{color:c,size:7},hovertemplate:ht});
+  }
+  Plotly.newPlot('probes',ptr,{paper_bgcolor:'rgba(0,0,0,0)',plot_bgcolor:'rgba(0,0,0,0)',font:{color:fg},height:360,margin:{l:60,r:10,t:36,b:46},
+    title:{text:'probes: concentration in time (dots = frames of the animation)',font:{size:13}},
+    xaxis:{title:'time (min)',zeroline:false},yaxis:{title:'concentration',type:$('scale').value==='log'?'log':'linear',exponentformat:'power'},
+    legend:{orientation:'h',y:-0.25},hovermode:'closest',
+    shapes:[{type:'line',xref:'x',yref:'paper',x0:META.minutes[0],x1:META.minutes[0],y0:0,y1:1,line:{color:fg,width:1,dash:'dot'}}]},{responsive:true});
+  $('probelab').style.display='flex';
+  const sel=$('probesel'); sel.add(new Option('all probes (' + NP + ')','all'));
+  PR.names.forEach((n,k)=>sel.add(new Option(n,String(k))));
+  sel.onchange=()=>{const v=sel.value; Plotly.restyle('probes',{visible:ptr.map((_,i)=>v==='all'||String(i>>1)===v)});};
+}
 syncPlane();
 })();
 </script></body></html>
