@@ -16,7 +16,7 @@ On Windows, follow the step-by-step guide [Docker on Windows](docker-windows.md)
 docker pull ghcr.io/spark-hydro/memdif3d:latest
 ```
 
-Images are published for every release (`0.4.2` and `latest` for the full image, `0.4.2-slim` and `slim` for the slim one). To build them yourself from the repository:
+Images are published for every release (`0.4.3` and `latest` for the full image, `0.4.3-slim` and `slim` for the slim one). To build them yourself from the repository:
 
 ```bash
 docker build -t memdif3d --build-arg VERSION=$(git describe --tags --always) .                    # full
