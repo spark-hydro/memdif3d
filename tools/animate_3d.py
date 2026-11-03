@@ -177,7 +177,7 @@ def main():
               + (f", {len(m.hset)} holes" if m.hset else ''),
         coloraxis=dict(colorscale=a.cmap, cmin=lo, cmax=hi, colorbar=cbar),
         scene=dict(xaxis=dict(title='distance from membrane, ICOL (mm)', range=[-1.5, zs[-1] + 1.5]),
-                   yaxis=dict(title='IROW (mm)'), zaxis=dict(title='ILAY (mm)'),
+                   yaxis=dict(title='IROW (mm)', autorange='reversed'), zaxis=dict(title='ILAY (mm)', autorange='reversed'),
                    aspectmode='data', camera=dict(eye=dict(x=1.7, y=-1.7, z=1.0))),
         updatemenus=[dict(type='buttons', direction='left', x=0.02, y=0.0, xanchor='left', yanchor='top', pad=dict(t=60),
                           buttons=[play, pause])],

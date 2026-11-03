@@ -7,7 +7,8 @@
 
 Open the HTML in any browser (no server, no internet). Left: the 3D domain (the box of sand cells, the source,
 the membrane faces: grey = membrane, red = hole, black = closed) that you can rotate, with the plane you chose
-drawn inside it. Right: the concentration on that plane, animated over time. Choose the kind of plane and its
+drawn inside it. Right: the concentration on that plane, animated over time. The figures follow the MODFLOW orientation: the origin
+is at the upper left, row 1 is at the top, column 1 at the left, and layer 1 at the top. Choose the kind of plane and its
 number in the page, without running anything again:
   Layer   one ILAY, rows x columns           (top view, MODFLOW xy)
   Row     one IROW, layers x columns         (row section, MODFLOW xz)
@@ -288,8 +289,8 @@ if(PR){
 const iB=tr.length; tr.push({type:'scatter3d',mode:'markers',x:bx,y:by,z:bz,marker:{size:2,color:bc,opacity:.35},name:'boundary / solid cells',hoverinfo:'skip',visible:false});
 const iP=tr.length; tr.push({type:'mesh3d',x:[0,0,0,0],y:[0,0,0,0],z:[0,0,0,0],i:[0,0],j:[1,2],k:[2,3],color:'#0f766e',opacity:.45,name:'chosen plane',hoverinfo:'skip',showlegend:true});
 Plotly.newPlot('scene',tr,{paper_bgcolor:'rgba(0,0,0,0)',font:{color:fg},margin:{l:0,r:0,t:30,b:0},height:600,legend:{x:0,y:1},
-  title:{text:'domain: x = ICOL (distance from the membrane), y = IROW, z = ILAY',font:{size:13}},
-  scene:{xaxis:{title:'ICOL',range:[-1.5,x1+.5]},yaxis:{title:'IROW'},zaxis:{title:'ILAY'},aspectmode:'data',camera:{eye:{x:1.7,y:-1.7,z:1.0}}}},{responsive:true});
+  title:{text:'domain (MODFLOW order): ICOL to the right, IROW toward you, ILAY downward (layer 1 on top)',font:{size:13}},
+  scene:{xaxis:{title:'ICOL',range:[-1.5,x1+.5]},yaxis:{title:'IROW',autorange:'reversed'},zaxis:{title:'ILAY',autorange:'reversed'},aspectmode:'data',camera:{eye:{x:1.7,y:-1.7,z:1.0}}}},{responsive:true});
 function movePlane(){
   const t=$('ptype').value,k=sel[t]; let X,Y,Z;
   if(t==='layer'){X=[x0,x1,x1,x0];Y=[y0,y0,y1,y1];Z=[k,k,k,k];}
@@ -333,10 +334,13 @@ function draw(){
   const cb=log?{tickvals:[-4,-3,-2,-1,0].map(d=>Math.log10(vmax)+d),ticktext:[-4,-3,-2,-1,0].map(d=>(vmax*Math.pow(10,d)).toPrecision(2)),title:{text:'concentration'}}:{title:{text:'concentration'}};
   const trace={type:'heatmap',x:p.xs,y:p.ys,z:zz,customdata:p.z,colorscale:'Viridis',zmin:log?Math.log10(vmin):0,zmax:log?Math.log10(vmax):vmax,
     zsmooth:false,hoverongaps:false,colorbar:cb,hovertemplate:p.xl.split(' ')[0]+' %{x}, '+p.yl+' %{y}<br>C = %{customdata:.4g}<extra></extra>'};
-  Plotly.react('plane2d',[trace,...probeMarks(t,k)],{paper_bgcolor:'rgba(0,0,0,0)',plot_bgcolor:'#c8c8c8',font:{color:fg},height:HP,margin:{l:55,r:10,t:40,b:50},
+  const ex=t==='column'?[.5,NR+.5]:[-.5,NC+.5], ey=t==='layer'?[.5,NR+.5]:[.5,NL+.5];   // grey behind the cells that are not sand
+  const tk=(a,b)=>{const v=[];for(let i=a;i<=b;i++) if(i===a||i===b||i%5===0) v.push(i);return v;};
+  Plotly.react('plane2d',[trace,...probeMarks(t,k)],{paper_bgcolor:'rgba(0,0,0,0)',plot_bgcolor:'rgba(0,0,0,0)',font:{color:fg},height:HP,margin:{l:55,r:10,t:40,b:50},
+    shapes:[{type:'rect',xref:'x',yref:'y',x0:ex[0],x1:ex[1],y0:ey[0],y1:ey[1],fillcolor:'#c8c8c8',line:{width:0},layer:'below'}],
     title:{text:NAME[t]+k+' &nbsp; minute '+META.minutes[fr]+day(META.minutes[fr])+', source = '+META.cm[fr].toPrecision(4),font:{size:13}},
-    xaxis:{title:p.xl,constrain:'domain',range:t==='column'?[.5,NR+.5]:[-.5,NC+.5]},
-    yaxis:{title:p.yl,scaleanchor:'x',constrain:'domain',range:t==='layer'?[.5,NR+.5]:[.5,NL+.5]}},{responsive:true});
+    xaxis:{title:p.xl,constrain:'domain',zeroline:false,tickmode:'array',tickvals:t==='column'?tk(1,NR):tk(0,NC)},
+    yaxis:{title:p.yl,scaleanchor:'x',constrain:'domain',autorange:'reversed',zeroline:false,tickmode:'array',tickvals:t==='layer'?tk(1,NR):tk(1,NL)}},{responsive:true});
   $('tlab').textContent='minute '+META.minutes[fr]+day(META.minutes[fr]);
   markTime();
 }

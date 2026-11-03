@@ -95,8 +95,8 @@ def main():
     fig = go.Figure(tr)
     fig.update_layout(
         title=f'memdif3d domain: {m.ny} layers x {m.nx} rows x {m.nz} columns of 1 mm (NLAY x NROW x NCOL), membrane {lm:g} mm',
-        scene=dict(xaxis=dict(title='ICOL: columns, away from the source (mm)'), yaxis=dict(title='IROW: rows'),
-                   zaxis=dict(title='ILAY: layers'), aspectmode='data', camera=dict(eye=dict(x=1.6, y=-1.9, z=1.1))),
+        scene=dict(xaxis=dict(title='ICOL: columns, away from the source (mm)'), yaxis=dict(title='IROW: rows', autorange='reversed'),
+                   zaxis=dict(title='ILAY: layers', autorange='reversed'), aspectmode='data', camera=dict(eye=dict(x=1.6, y=-1.9, z=1.1))),
         legend=dict(x=0.01, y=0.99), margin=dict(l=0, r=0, t=50, b=0), height=720)
     fig.write_html(a.out, include_plotlyjs=True, full_html=True)
     print(f'wrote {a.out}')

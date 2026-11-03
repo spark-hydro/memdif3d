@@ -109,16 +109,16 @@ def main():
 
     fig, ax = plt.subplots(2, 3, figsize=(13, 8.2), constrained_layout=True)
     ims = {}
-    ext_f = (0.5, nx + 0.5, 0.5, ny + 0.5)
-    ext_s = (-0.5, zc + 0.5, 0.5, nx + 0.5)
+    ext_f = (0.5, nx + 0.5, ny + 0.5, 0.5)           # origin at the upper left (MODFLOW): row 1 and layer 1 at the top
+    ext_s = (-0.5, zc + 0.5, nx + 0.5, 0.5)
     a0, b0 = fa[0], fb[0]
     for j, (fr, lab) in enumerate(((a0, a.label_a), (b0, a.label_b))):
-        ims['f', j] = ax[0, j].imshow(shaped(face(fr[0])), origin='lower', cmap=cmap, norm=norm, extent=ext_f, interpolation='nearest')
-        ims['s', j] = ax[1, j].imshow(shaped(side(fr[0], fr[1]['cm'])), origin='lower', cmap=cmap, norm=norm, extent=ext_s, interpolation='nearest')
+        ims['f', j] = ax[0, j].imshow(shaped(face(fr[0])), origin='upper', cmap=cmap, norm=norm, extent=ext_f, interpolation='nearest')
+        ims['s', j] = ax[1, j].imshow(shaped(side(fr[0], fr[1]['cm'])), origin='upper', cmap=cmap, norm=norm, extent=ext_s, interpolation='nearest')
         ax[0, j].set_title(f'{lab}: column plane, yz (ICOL = {a.face_z})', fontsize=9)
         ax[1, j].set_title(f'{lab}: top view, xy (ILAY = {iy})', fontsize=9)
-    ims['f', 2] = ax[0, 2].imshow(face(a0[0] * 0), origin='lower', cmap=dmap, norm=dnorm, extent=ext_f, interpolation='nearest')
-    ims['s', 2] = ax[1, 2].imshow(side(a0[0] * 0, 0.0), origin='lower', cmap=dmap, norm=dnorm, extent=ext_s, interpolation='nearest')
+    ims['f', 2] = ax[0, 2].imshow(face(a0[0] * 0), origin='upper', cmap=dmap, norm=dnorm, extent=ext_f, interpolation='nearest')
+    ims['s', 2] = ax[1, 2].imshow(side(a0[0] * 0, 0.0), origin='upper', cmap=dmap, norm=dnorm, extent=ext_s, interpolation='nearest')
     ax[0, 2].set_title('difference: column plane', fontsize=9)
     ax[1, 2].set_title('difference: top view', fontsize=9)
     for j in range(3):

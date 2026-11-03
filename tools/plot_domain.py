@@ -68,13 +68,13 @@ def main():
 
     draw_side(ax)
     ax.set_xlim(-depth - 2, lm + m.nz + 1)
-    ax.set_ylim(0.5, m.nx + 0.5)
+    ax.set_ylim(m.nx + 0.5, 0.5)                    # MODFLOW orientation: row 1 at the top
     ax.set_aspect('equal')
     ax.set_xlabel('distance from the membrane (mm)  [Z, away from the source]')
     ax.set_ylabel('IROW (rows)')
     ax.set_title(f'Side view, slice ILAY = {iy} (to scale): {m.nx} x {m.ny} x {m.nz} cells of 1 mm; membrane {lm:g} mm;\n'
                  f'source {len(fx)} x {len(fy)} mm footprint, {depth:g} mm deep (V = {m.V:g} mm3)', fontsize=10, pad=12)
-    ax.text(-depth / 2, fx[-1] + 2.2, 'source cell\n(one fully mixed value)', ha='center', va='bottom', fontsize=9)
+    ax.text(-depth / 2, fx[0] - 2.2, 'source cell\n(one fully mixed value)', ha='center', va='bottom', fontsize=9)
 
     # zoom at the membrane
     xr = (-3.0, 6.0)
@@ -87,7 +87,7 @@ def main():
         az.add_patch(Rectangle((0, ix - 0.5), lm, 1, fc=COL['closed'] if k == 'CLOSED' else COL['membrane'], ec='k', lw=0.4))
     cx = (fx[0] + fx[-1]) / 2
     az.set_xlim(*xr)
-    az.set_ylim(cx - 7.5, cx + 7.5)
+    az.set_ylim(cx + 7.5, cx - 7.5)
     az.set_aspect('equal')
     az.set_xlabel('mm')
     az.set_title(f'Zoom at the membrane: membrane {lm:g} mm thick, sand cells 1 mm. In the model the membrane is a\n'
@@ -108,9 +108,9 @@ def main():
                 col = COL['sand'] if code == 1 else COL['boundary'] if code == 2 else COL['solid']
             ap_.add_patch(Rectangle((y - 0.5, ix - 0.5), 1, 1, fc=col, ec='#666', lw=0.3))
     ap_.set_xlim(0.5, m.ny + 0.5)
-    ap_.set_ylim(0.5, m.nx + 0.5)
+    ap_.set_ylim(m.nx + 0.5, 0.5)
     ap_.set_aspect('equal')
-    ap_.set_xlabel('ILAY (columns)')
+    ap_.set_xlabel('ILAY (layers)')
     ap_.set_ylabel('IROW (rows)')
     nh = sum(1 for k in m.kind.values() if k == 'HOLE')
     ap_.set_title(f'Plan view of the ICOL = 1 layer: {len(m.kind)} faces, {nh} holes', fontsize=9)

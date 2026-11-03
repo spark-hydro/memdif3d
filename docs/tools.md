@@ -11,6 +11,8 @@ Python scripts in `tools/`. The environment in `environment.yml` (`conda env cre
 | `make_test_case.py` | writes the small synthetic sets used by the tests |
 
 ## Pictures and animations
+
+All pictures use the MODFLOW orientation: the origin is at the upper left, **row 1 is at the top, column 1 at the left, and layer 1 at the top** (layers increase downward). In the 3D pages the `IROW` axis points toward you and the `ILAY` axis downward. Cell ids start at 1; the source cell is column 0 in the section pictures.
 | Script | What it does |
 |---|---|
 | `plot_domain.py` | to-scale side view, zoom at the membrane and plan view of the geometry |

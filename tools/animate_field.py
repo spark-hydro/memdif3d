@@ -286,8 +286,8 @@ def main():
     if a.face:
         ax = axes[ai]
         ai += 1
-        ims['face'] = ax.imshow(face_img(arr0, hidden), origin='lower', cmap=cmap, norm=norm, aspect='equal',
-                                extent=(0.5, nx + 0.5, 0.5, ny + 0.5), interpolation='nearest')
+        ims['face'] = ax.imshow(face_img(arr0, hidden), origin='upper', cmap=cmap, norm=norm, aspect='equal',
+                                extent=(0.5, nx + 0.5, ny + 0.5, 0.5), interpolation='nearest')
         ax.set_xlabel('IROW (row)')
         ax.set_ylabel('ILAY (layer)')
         ax.set_title(f'column plane, MODFLOW yz  (ICOL = {a.face_z})', fontsize=10)
@@ -300,8 +300,8 @@ def main():
             k, nrow, ylab, what = (a.slice or cy), nx, 'IROW (row)', f'top view, MODFLOW xy  (ILAY = {a.slice or cy})'
         else:
             k, nrow, ylab, what = (a.slice or cx), ny, 'ILAY (layer)', f'row section, MODFLOW xz  (IROW = {a.slice or cx})'
-        ims['side'] = ax.imshow(side_img(arr0, hidden, info0['cm']), origin='lower', cmap=cmap, norm=norm, aspect='equal',
-                                extent=(-0.5, nz + 0.5, 0.5, nrow + 0.5), interpolation='nearest')
+        ims['side'] = ax.imshow(side_img(arr0, hidden, info0['cm']), origin='upper', cmap=cmap, norm=norm, aspect='equal',
+                                extent=(-0.5, nz + 0.5, nrow + 0.5, 0.5), interpolation='nearest')
         ax.axvline(0.5, color='white', lw=0.8)
         ax.set_xlabel('ICOL (0 = source cell)')
         ax.set_ylabel(ylab)
