@@ -121,6 +121,11 @@ if(BUILD_TESTING)
       COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tests/test_animate.py $<TARGET_FILE:memdif3d>
               ${CMAKE_SOURCE_DIR}/data/reduced_matrix/rm.nam)
     set_tests_properties(animate_smoke PROPERTIES PASS_REGULAR_EXPRESSION "PASS|SKIP" SKIP_REGULAR_EXPRESSION "SKIP" TIMEOUT 300)
+    # the interactive HTML viewer: the data in the page equals the result files (needs numpy and plotly)
+    add_test(NAME viewer_data
+      COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tests/test_viewer.py $<TARGET_FILE:memdif3d>
+              ${CMAKE_SOURCE_DIR}/data/reduced_matrix/rm.nam)
+    set_tests_properties(viewer_data PROPERTIES PASS_REGULAR_EXPRESSION "PASS|SKIP" SKIP_REGULAR_EXPRESSION "SKIP" TIMEOUT 300)
   endif()
 endif()
 

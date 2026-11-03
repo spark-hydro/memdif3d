@@ -9,7 +9,7 @@ What you do, in order:
 3. make a folder for your model and for your runs
 4. set up the model (the input files)
 5. run it
-6. look at the results
+6. look at the results (an interactive viewer, 3D pages and GIFs)
 
 !!! note "Native program instead"
     If you only want to run the model and do not need the plotting tools, the release page has a Windows program, `memdif3d.exe`, that needs no Docker. This page is for the full set: the model, the plots and the animations in one image. The general description of the image is on the page [Run with Docker](docker.md).
@@ -163,6 +163,28 @@ If a run is interrupted, give the same command again in the same run folder: it 
 ## 6. Look at the results
 
 The plotting tools run in the same image. Start them from the run folder, with the same two links. The result files are written into the run folder; open them from Windows Explorer.
+
+### Interactive viewer: the domain, and any layer, row or column
+
+This is the page to start with. It is one HTML file with the 3D model on the left and the concentration on a plane of your choice on the right.
+
+```powershell
+docker run --rm -v ${PWD}:/work -v C:\memdif3d\mymodel:/model:ro ghcr.io/spark-hydro/memdif3d make_viewer.py . --nam /model/rm.nam --out viewer.html
+```
+
+Double-click `viewer.html`. In the bar on top choose **Plane**: *Layer* (the top view, rows × columns), *Row* (a section, layers × columns) or *Column* (a plane at one distance from the membrane, rows × layers), then the **number** of the layer, row or column with the slider. The chosen plane is drawn inside the 3D box. Use the **Time** slider or **Play** to animate the plane. Nothing runs again when you change the plane; the page holds the data. The frames are the day files of the run (`field_001.csv`, `field_002.csv`, ...).
+
+To check a model **before** you run it, make the page without results. It shows the domain, the membrane faces and the start state:
+
+```powershell
+docker run --rm -v ${PWD}:/work -v C:\memdif3d\mymodel:/model:ro ghcr.io/spark-hydro/memdif3d make_viewer.py --nam /model/rm.nam --out domain.html
+```
+
+For finer time steps use the minutes output (section 4.3) and choose a window; the page grows with the number of frames:
+
+```powershell
+docker run --rm -v ${PWD}:/work -v C:\memdif3d\mymodel:/model:ro ghcr.io/spark-hydro/memdif3d make_viewer.py . --nam /model/rm.nam --pattern "day_*.csv" --every 5 --from 0 --to 120 --out first2h.html
+```
 
 ### 3D animation in the browser
 

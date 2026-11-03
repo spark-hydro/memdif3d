@@ -15,9 +15,18 @@ Python scripts in `tools/`. The environment in `environment.yml` (`conda env cre
 |---|---|
 | `plot_domain.py` | to-scale side view, zoom at the membrane and plan view of the geometry |
 | `plot_domain_3d.py` | the geometry as an interactive 3D page (one HTML file), made from the model input files only (name file and packages; no Excel file, no run output): `python tools/plot_domain_3d.py data/reduced_matrix/rm.nam --out domain3d.html [--ilay 15]`; the orange plane is the layer tile of the `.dis` file at `--ilay`, the purple plane the membrane plane (`ICOL = 1`) |
+| `make_viewer.py` | interactive HTML viewer, one file: the 3D domain, and the concentration on a layer, a row or a column that you choose in the page, animated over time (see below) |
 | `animate_3d.py` | interactive 3D animation of the field files (one HTML file; drag to rotate while it plays) |
 | `animate_field.py` | animated GIF with a face view and a side view, each switched on or off |
 | `animate_compare.py` | GIF with two runs side by side and their difference, for example without and with holes |
+
+```bash
+python tools/make_viewer.py run1 --nam data/reduced_matrix/rm.nam --out viewer.html
+```
+
+**The viewer** (`make_viewer.py`) is one HTML file for a browser, with no server and no internet. The left panel is the 3D domain: the box of sand cells, the source, the membrane faces (grey membrane, red holes, black closed faces), with the plane you chose drawn inside it; rotate it with the mouse. The right panel is the concentration on that plane. In the bar on top you choose the kind of plane (*Layer*, the top view; *Row*, a row section; *Column*, a plane at one distance from the membrane), its number, and the time, with a slider, a Play button and a speed. The source concentration is column 0 beside the membrane. You can switch between logarithmic and linear colours, set the top of the colour scale, and show the boundary and solid cells in 3D. Nothing needs to run again when you change the plane.
+
+Without a `RUN_DIR` the page shows only the domain and the start state, which is a quick check of a model before you run it. The frames come from the result files, like the other scripts: `--pattern 'field_*.csv'` (default), `'snap_*.csv'`, or `'day_*.txt'` with `--every`, `--from` and `--to`. The page stores the concentration of every cell of every frame as a compressed 16-bit number (precision about 1e-4), about 15 to 50 KB per frame, so keep the number of frames moderate (for example `--every 60`). The script prints the size of the page.
 
 ```bash
 python tools/animate_3d.py run1 --nam data/reduced_matrix/rm.nam --log --out solute3d.html

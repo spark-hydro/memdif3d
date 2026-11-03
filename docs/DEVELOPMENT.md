@@ -5,7 +5,7 @@
 git clone <repo url> && cd memdif3d
 conda env create -f environment.yml && conda activate memdif3d     # Python tools only
 cmake --preset gfortran_release_linux && cmake --build build/release
-ctest --test-dir build/release --output-on-failure                 # 7 tests, animate_smoke skips without matplotlib
+ctest --test-dir build/release --output-on-failure                 # 8 tests, animate_smoke and viewer_data skip without matplotlib/plotly
 ```
 Tools needed: gfortran 13+ (or Intel ifx), CMake 3.22+, make, Python 3. See BUILD.md.
 
