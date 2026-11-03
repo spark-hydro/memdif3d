@@ -102,4 +102,14 @@ with tempfile.TemporaryDirectory() as d, tempfile.TemporaryDirectory() as md:
     if r.returncode == 0:
         sys.exit('FAIL: --ilay with --irow must be refused')
     print('MODFLOW view options ok')
+    out = os.path.join(d, 'window.gif')
+    r = subprocess.run([sys.executable, script, d, '--nam', mnam, '--pattern', 'day_*.txt', '--every', '10', '--from', '10', '--to', '20',
+                        '--out', out, '--dpi', '40'], capture_output=True, text=True)
+    if r.returncode != 0 or Image.open(out).n_frames != 2:
+        sys.exit('FAIL: --from 10 --to 20 must give the 2 frames of steps 10 and 20\n' + r.stdout + r.stderr)
+    r = subprocess.run([sys.executable, script, d, '--nam', mnam, '--pattern', 'day_*.txt', '--from', '5000', '--out', os.path.join(d, 'e.gif')],
+                       capture_output=True, text=True)
+    if r.returncode == 0:
+        sys.exit('FAIL: an empty time window must be refused')
+    print('time window ok')
 print('PASS')

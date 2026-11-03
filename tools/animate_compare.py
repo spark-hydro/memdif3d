@@ -27,19 +27,19 @@ from animate_field import load_frames  # noqa: E402
 import memdif_proto as P              # noqa: E402
 
 
-def load(run, nam, pattern, every):
+def load(run, nam, pattern, every, tfrom=None, tto=None):
     files = sorted(glob.glob(os.path.join(run, pattern)))
     if not files:
         sys.exit(f'no files {pattern} in {run}')
     m = P.Model(nam)
-    frames = load_frames(files, every, m.cm0)
+    frames = load_frames(files, every, m.cm0, tfrom, tto)
     ny, nx, nz = frames[0][0].shape
     hidden = np.ones((ny, nx, nz), bool)
     c0 = np.zeros((ny, nx, nz))
     for (x, iy, iz), code in m.idom.items():
         hidden[iy - 1, x - 1, iz - 1] = code != 1
         c0[iy - 1, x - 1, iz - 1] = m.c0[(x, iy, iz)]
-    if frames[0][1]['step'] != 0:
+    if frames[0][1]['step'] != 0 and not tfrom:
         frames.insert(0, (c0, dict(period=0, step=0, minutes=0.0, cm=m.cm0)))
     return m, frames, hidden
 
@@ -54,6 +54,8 @@ def main():
     ap.add_argument('--label-b', default='with holes')
     ap.add_argument('--pattern', default='field_*.csv')
     ap.add_argument('--every', type=int, default=1)
+    ap.add_argument('--from', dest='tfrom', type=float, default=None, help='first minute shown (1 day = 1440)')
+    ap.add_argument('--to', dest='tto', type=float, default=None, help='last minute shown')
     ap.add_argument('--icol', type=int, default=None, help='same as --face-z (column plane, MODFLOW yz)')
     ap.add_argument('--ilay', type=int, default=None, help='same as --slice (top view, MODFLOW xy: the layer of the side view)')
     ap.add_argument('--face-z', type=int, default=1, help='ICOL layer of the face view (default 1, touching the membrane)')
@@ -71,8 +73,8 @@ def main():
     if a.ilay is not None:
         a.slice = a.ilay
 
-    ma, fa, hid = load(a.run_a, a.nam_a, a.pattern, a.every)
-    mb, fb, hidb = load(a.run_b, a.nam_b, a.pattern, a.every)
+    ma, fa, hid = load(a.run_a, a.nam_a, a.pattern, a.every, a.tfrom, a.tto)
+    mb, fb, hidb = load(a.run_b, a.nam_b, a.pattern, a.every, a.tfrom, a.tto)
     if len(fa) != len(fb) or fa[0][0].shape != fb[0][0].shape or (hid != hidb).any():
         sys.exit('the two runs must have the same grid, domain and number of frames')
     ny, nx, nz = fa[0][0].shape

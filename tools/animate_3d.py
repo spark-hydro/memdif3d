@@ -42,7 +42,9 @@ def main():
     ap.add_argument('--nam', required=True, help='name file of the run (geometry, source, initial state)')
     ap.add_argument('--out', default='solute3d.html')
     ap.add_argument('--pattern', default='field_*.csv')
-    ap.add_argument('--every', type=int, default=1, help='use every n-th file')
+    ap.add_argument('--every', type=int, default=1, help='use every n-th file (day files: every n-th step)')
+    ap.add_argument('--from', dest='tfrom', type=float, default=None, help='first minute shown (minutes of simulated time; 1 day = 1440)')
+    ap.add_argument('--to', dest='tto', type=float, default=None, help='last minute shown')
     ap.add_argument('--log', action='store_true', help='logarithmic colour scale')
     ap.add_argument('--vmin', type=float, default=None, help='lowest concentration drawn (default 1e-4 of the maximum with --log, else 0.02 of it)')
     ap.add_argument('--vmax', type=float, default=None)
@@ -60,7 +62,7 @@ def main():
     if not files:
         sys.exit(f'no files {a.pattern} in {a.run_dir}')
     m = P.Model(a.nam)
-    frames = load_frames(files, a.every, m.cm0)
+    frames = load_frames(files, a.every, m.cm0, a.tfrom, a.tto)
     ny, nx, nz = frames[0][0].shape
     if (m.nx, m.ny, m.nz) != (nx, ny, nz):
         sys.exit('name file and field files have different grid sizes')
@@ -69,7 +71,7 @@ def main():
     for (x, iy, iz), v in m.c0.items():
         c0[iy - 1, x - 1, iz - 1] = v
         fluid[iy - 1, x - 1, iz - 1] = m.idom[(x, iy, iz)] == 1
-    if not a.no_initial and frames[0][1]['step'] != 0:
+    if not a.no_initial and frames[0][1]['step'] != 0 and not a.tfrom:
         frames.insert(0, (c0, dict(period=0, step=0, minutes=0.0, cm=m.cm0)))
 
     # crop to the fluid cells; the grid is [ILAY, IROW, ICOL]

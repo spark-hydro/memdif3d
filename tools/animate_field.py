@@ -98,9 +98,9 @@ def probe_series(path):
     return out
 
 
-def read_day_frames(path, every=1, cm0=None):
+def read_day_frames(path, every=1, cm0=None, tfrom=None, tto=None):
     """All frames of a day file (the MINUTES output, text or csv, layers side by side or one tile per layer).
-    Only steps divisible by `every` are parsed. -> list of (array[ILAY, IROW, ICOL], dict(period, step, minutes, cm));
+    Only steps divisible by `every` and with tfrom <= minutes <= tto (both optional) are parsed. -> list of (array[ILAY, IROW, ICOL], dict(period, step, minutes, cm));
     the source concentration cm comes from the probes file next to it (cm0 for step 0)."""
     cm = probe_series(path)
     period = int(re.match(r'day_(\d+)\.', os.path.basename(path)).group(1))
@@ -130,7 +130,7 @@ def read_day_frames(path, every=1, cm0=None):
                     finish()
                     rows, tiles = [], {}
                     cur = (step, float(mt.group(2)), int(mt.group(6)))
-                    keep = (step % max(every, 1) == 0)
+                    keep = (step % max(every, 1) == 0) and (tfrom is None or cur[1] >= tfrom) and (tto is None or cur[1] <= tto)
                 if mt.group(3):
                     lays = layer_set(mt.group(3))
                 else:
@@ -146,15 +146,20 @@ def read_day_frames(path, every=1, cm0=None):
     return frames
 
 
-def load_frames(files, every=1, cm0=None):
+def load_frames(files, every=1, cm0=None, tfrom=None, tto=None):
     """The frames of the given files. field_*.csv / snap_*.csv: one frame per file, every n-th file.
-    day_*.txt / .csv: all minutes of the files, every n-th step (step 0 is kept)."""
+    day_*.txt / .csv: all minutes of the files, every n-th step (step 0 is kept).
+    tfrom, tto: only frames with tfrom <= minutes <= tto (minutes of simulated time, both optional)."""
     if files and is_day_file(files[0]):
         frames = []
         for f in files:
-            frames += read_day_frames(f, every, cm0)
-        return frames
-    return [read_field(f) for f in files[::max(every, 1)]]
+            frames += read_day_frames(f, every, cm0, tfrom, tto)
+    else:
+        frames = [read_field(f) for f in files[::max(every, 1)]]
+        frames = [f for f in frames if (tfrom is None or f[1]['minutes'] >= tfrom) and (tto is None or f[1]['minutes'] <= tto)]
+    if not frames:
+        sys.exit(f'no frames between minute {tfrom} and minute {tto} in these files')
+    return frames
 
 
 def main():
@@ -172,7 +177,9 @@ def main():
     ap.add_argument('--side-plane', choices=['xz', 'yz'], default='xz')
     ap.add_argument('--slice', type=int, default=None, help='ILAY (xz) or IROW (yz) of the side view; default: source centre')
     ap.add_argument('--pattern', default='field_*.csv')
-    ap.add_argument('--every', type=int, default=1, help='use every n-th file')
+    ap.add_argument('--every', type=int, default=1, help='use every n-th file (day files: every n-th step)')
+    ap.add_argument('--from', dest='tfrom', type=float, default=None, help='first minute shown (minutes of simulated time; 1 day = 1440)')
+    ap.add_argument('--to', dest='tto', type=float, default=None, help='last minute shown')
     ap.add_argument('--log', action='store_true', help='logarithmic colour scale')
     ap.add_argument('--vmin', type=float, default=None)
     ap.add_argument('--vmax', type=float, default=None)
@@ -205,7 +212,7 @@ def main():
         sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
         import memdif_proto as P0
         cm0 = P0.Model(a.nam).cm0
-    frames = load_frames(files, a.every, cm0)
+    frames = load_frames(files, a.every, cm0, a.tfrom, a.tto)
     ny, nx, nz = frames[0][0].shape
 
     # geometry from the input files (optional)
@@ -224,7 +231,7 @@ def main():
         c0 = np.zeros((ny, nx, nz))
         for (x, iy, iz), v in m.c0.items():
             c0[iy - 1, x - 1, iz - 1] = v
-        if not a.no_initial and frames[0][1]['step'] != 0:
+        if not a.no_initial and frames[0][1]['step'] != 0 and not a.tfrom:
             frames.insert(0, (c0, dict(period=0, step=0, minutes=0.0, cm=m.cm0)))
     if a.face_z is None:
         a.face_z = 1
