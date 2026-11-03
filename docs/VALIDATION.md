@@ -58,6 +58,8 @@ The two irregularities were confirmed as mistakes. `tools/fix_reduced_matrix_xls
 | 1440 steps (one day) | 2.8e-16 | 4.2e-17 | 0.886681363528 in both; the `Minutes` sheet (probe cell / 5625) agrees with the Fortran probe file in all 1440 minutes to 1.1e-16 |
 | control: the same 1440-step file against `data/original` (the mistakes) | 1.6e-2 | 1.3e-2 | 0.886624 against 0.886681 |
 
+The minutes output (`MINUTES` block, `DIGITS 16`, `FROM` = `TO` = the step) gives the same two comparisons: 10 steps 5.6e-17 (boundary cells 0), 1440 steps 2.8e-16 (boundary cells 4.2e-17), the same numbers as the field file.
+
 After 10 steps the two models are still identical (the solute has not reached the repaired places); the fix shows from about 700 steps on, so the one-day run is the real test. The Day files are not in the repository.
 
 ## 4. Independent physics checks (tests/test_cases.py)
