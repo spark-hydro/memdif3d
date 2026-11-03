@@ -76,4 +76,20 @@ with tempfile.TemporaryDirectory() as d, tempfile.TemporaryDirectory() as md:
     print(f'day files: {n} frames')
     if n != 4:
         sys.exit(f'FAIL: expected 4 frames from the day files, got {n}')
+    # 3D page: a block, a plane, and the refusal of two planes (needs plotly)
+    try:
+        import plotly  # noqa: F401
+    except ImportError:
+        print('3D page: SKIP, plotly not installed')
+    else:
+        s3 = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'tools', 'animate_3d.py')
+        base = [sys.executable, s3, d, '--nam', mnam, '--pattern', 'day_*.txt', '--every', '10', '--out', os.path.join(d, 'x.html')]
+        for extra, grid in (([], None), (['--ilay', '15-29'], '14'), (['--icol', '3'], 'x1x'), (['--irow', '22'], 'x1x')):
+            r = subprocess.run(base + extra, capture_output=True, text=True)
+            if r.returncode != 0 or '4 frames' not in r.stdout:
+                sys.exit(f'FAIL: animate_3d.py {extra} failed\n' + r.stdout + r.stderr)
+        r = subprocess.run(base + ['--ilay', '15', '--icol', '3'], capture_output=True, text=True)
+        if r.returncode == 0:
+            sys.exit('FAIL: two planes at once must be refused')
+        print('3D page: block, planes and refusal ok')
 print('PASS')

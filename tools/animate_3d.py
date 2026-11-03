@@ -14,6 +14,10 @@ Frames are the field_*.csv files (one per period) or, with --pattern 'day_*.txt'
 (the MINUTES output; --every 60 keeps one frame an hour; probes_NNN.csv must be next to them for the source
 concentration). The initial state is added as the first frame.
 
+Show only part of the box: --ilay 15-29 --irow 22-43 --icol 1-10 (ranges, 1-based, both ends included) cut the
+cloud open; one number makes a plane: --ilay 15 is the layer through the middle of the source, --irow 22 the middle
+row, --icol 3 the plane 3 mm from the membrane (only one of them may be a single number).
+
 Needs: numpy, plotly   (pip install numpy plotly)
 """
 import argparse
@@ -46,6 +50,9 @@ def main():
     ap.add_argument('--surfaces', type=int, default=18, help='number of iso-surfaces in the cloud (default 18)')
     ap.add_argument('--cmap', default='Viridis')
     ap.add_argument('--no-initial', action='store_true')
+    ap.add_argument('--ilay', help='show only these layers, e.g. 15 or 15-29 (a block); one number gives a plane')
+    ap.add_argument('--irow', help='show only these rows, e.g. 22 or 22-43')
+    ap.add_argument('--icol', help='show only these columns (distance from the membrane), e.g. 3 or 1-10')
     ap.add_argument('--frame-ms', type=int, default=400, help='display time of one frame in the player')
     a = ap.parse_args()
 
@@ -67,6 +74,23 @@ def main():
 
     # crop to the fluid cells; the grid is [ILAY, IROW, ICOL]
     ys, xs, zs = (np.where(fluid.any(axis=tuple(j for j in range(3) if j != k)))[0] for k in range(3))
+    def clip(r, idx, name):                                   # --ilay 15-29: keep these indices (1-based, both included)
+        if not r:
+            return idx
+        lo, _, hi = r.partition('-')
+        try:
+            lo, hi = int(lo), int(hi or lo)
+        except ValueError:
+            sys.exit(f'--{name} needs a number or a range like 10-20')
+        keep = idx[(idx >= lo - 1) & (idx <= hi - 1)]
+        if keep.size == 0:
+            sys.exit(f'--{name} {r}: no fluid cells there (fluid cells are {idx[0] + 1} to {idx[-1] + 1})')
+        return keep
+    ys, xs, zs = clip(a.ilay, ys, 'ilay'), clip(a.irow, xs, 'irow'), clip(a.icol, zs, 'icol')
+    single = [len(ys) == 1, len(xs) == 1, len(zs) == 1]
+    if sum(single) > 1:
+        sys.exit('choose a block or one plane: at most one of --ilay, --irow, --icol may be a single number')
+    plane_ax = single.index(True) if any(single) else None     # axis of [ILAY, IROW, ICOL] that is a plane
     sl = (slice(ys[0], ys[-1] + 1), slice(xs[0], xs[-1] + 1), slice(zs[0], zs[-1] + 1))
     msk = fluid[sl]
     gy, gx, gz = np.meshgrid(np.arange(ys[0], ys[-1] + 1) + 1, np.arange(xs[0], xs[-1] + 1) + 1,
@@ -86,6 +110,9 @@ def main():
         v = np.where(msk, conv(c[sl]), lo)              # solid and boundary cells sit at the floor: invisible
         return v.ravel()
 
+    def plane_color(c):                                  # one plane: colours of the cells, no cell outside the fluid
+        return np.squeeze(np.where(msk, conv(c[sl]), np.nan), axis=plane_ax)
+
     # the source slab: x from -1 to 0 under the footprint (cells are 1 mm, centres at integers)
     fx = [f[0] for f in m.faces] or [1]
     fy = [f[1] for f in m.faces] or [1]
@@ -103,10 +130,16 @@ def main():
         return [float(conv(np.array(f[1]['cm'])))] * 8
 
     # plot axes: x = distance (ICOL), y = IROW, z = ILAY
-    vol = go.Volume(x=gz.ravel(), y=gx.ravel(), z=gy.ravel(), value=cloud(frames[0][0]),
-                    isomin=lo + 0.02 * (hi - lo), isomax=hi, surface_count=a.surfaces, opacity=a.opacity,
-                    coloraxis='coloraxis', caps=dict(x_show=False, y_show=False, z_show=False), name='solute',
-                    showlegend=False)
+    if plane_ax is None:
+        vol = go.Volume(x=gz.ravel(), y=gx.ravel(), z=gy.ravel(), value=cloud(frames[0][0]),
+                        isomin=lo + 0.02 * (hi - lo), isomax=hi, surface_count=a.surfaces, opacity=a.opacity,
+                        coloraxis='coloraxis', caps=dict(x_show=False, y_show=False, z_show=False), name='solute',
+                        showlegend=False)
+    else:                                                # a plane is drawn as a surface; cells outside the fluid are gaps
+        ok = np.squeeze(msk, axis=plane_ax)
+        px, py, pz = (np.where(ok, np.squeeze(g, axis=plane_ax), np.nan) for g in (gz, gx, gy))
+        vol = go.Surface(x=px, y=py, z=pz, surfacecolor=plane_color(frames[0][0]), coloraxis='coloraxis',
+                         name='solute', showlegend=False, hoverinfo='skip')
     src = go.Mesh3d(x=Z, y=X, z=Y, intensity=cm_val(frames[0]), coloraxis='coloraxis', flatshading=True,
                     opacity=1.0, name='source', hoverinfo='skip', **tri)
     traces = [vol, src]
@@ -121,7 +154,8 @@ def main():
         t = info['minutes']
         return f"day {t / 1440:.2f}" if t >= 1440 or t == 0 else f"{t / 60:.1f} h"
 
-    plot_frames = [go.Frame(name=str(i), traces=[0, 1], data=[go.Volume(value=cloud(f[0])), go.Mesh3d(intensity=cm_val(f))])
+    plot_frames = [go.Frame(name=str(i), traces=[0, 1], data=[go.Volume(value=cloud(f[0])) if plane_ax is None else go.Surface(surfacecolor=plane_color(f[0])),
+                                                           go.Mesh3d(intensity=cm_val(f))])
                    for i, f in enumerate(frames)]
     tv = np.linspace(lo, hi, 6)
     cbar = dict(title='concentration', tickvals=list(tv),
