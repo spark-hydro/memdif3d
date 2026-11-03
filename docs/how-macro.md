@@ -1,6 +1,6 @@
 # How the Excel macro works
 
-The macro `RunDailySimulation` (in `excel/DailyRun.bas`, and `excel/DailyRun_fixed.bas` for the corrected workbook) runs the spreadsheet model one day at a time. It was the first version of this model; the Fortran program ([How the Fortran program works](how-fortran.md)) computes the same numbers, and the two agree to 3e-16 (see the validation page of the manual). This page follows one run of the macro: what it reads, what it repeats and what it writes. It is written for teaching; every diagram can be shown on a screen.
+The macro `RunDailySimulation` (in `excel/DailyRun_fixed.bas`) runs the spreadsheet model one day at a time. It was the first version of this model; the Fortran program ([How the Fortran program works](how-fortran.md)) computes the same numbers, and the two agree to 3e-16 (see the validation page of the manual). This page follows one run of the macro: what it reads, what it repeats and what it writes. It is written for teaching; every diagram can be shown on a screen.
 
 How to read the diagrams: a rounded box is a start or a stop, a diamond is a question, a rectangle is a step.
 
@@ -37,7 +37,7 @@ The model is a box of 29 layers x 43 rows x 25 columns. The sheet shows each **l
 | `ILAY` 1 to 29 (layer) | tiles from left to right |
 | the source | 225 cells with one and the same value: rows 15 to 29 in the extra column to the left of each tile of layers 8 to 22 (the membrane footprint) |
 
-For the corrected workbook the tiles are at these columns (the original workbook has the last tile one column further left, `ABV:ACT`):
+The tiles are at these columns:
 
 | ILAY | columns | note |
 |---|---|---|
@@ -50,7 +50,7 @@ For the corrected workbook the tiles are at these columns (the original workbook
 | 28 | `AAV:ABT` | |
 | 29 | `ABW:ACU` | boundary layer |
 
-The state block is the range `A6:ACU48` and the next-state block `A50:ACU92` (`A6:ACT48` and `A50:ACT92` in the original). They have the same size, which the macro checks.
+The state block is the range `A6:ACU48` and the next-state block `A50:ACU92`. They have the same size, which the macro checks.
 
 ### 2.1 One cell, as an example
 
@@ -69,7 +69,7 @@ AAE59 = AAE15                                  the cell itself (old value)
 
 `$GM$1` is the mass-transfer coefficient of the sand (Ks) and `$GV$1` the retardation R, so `$GM$1/$GV$1` is `ks` of the Fortran program. In the Fortran program the neighbours come from the table `nb`; in the sheet they are the cell addresses in the formula. The same formula is written in all 23,922 sand cells: the geometry is *in the formulas*.
 
-The layer neighbours are exactly 27 columns away from each other. The original workbook broke this rule for the last tile (26 columns), and that was one of the two mistakes that were corrected.
+The layer neighbours are exactly 27 columns away from each other. The macro and the Fortran conversion rely on this regular spacing.
 
 ### 2.2 The parameters (rows 1 to 4)
 
@@ -201,7 +201,7 @@ flowchart TD
 
 Two cautions that follow from this:
 
-- The macro **overwrites the state block of the workbook** while it runs. Use a copy of the original file, and keep a clean copy of the initial state.
+- The macro **overwrites the state block of the workbook** while it runs. Use a copy of the workbook, and keep a clean copy of the initial state.
 - To start a simulation again from day 1, delete the `daily_output` folder, otherwise the macro continues after the last Day file.
 
 ## 6. Stopping and errors

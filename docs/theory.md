@@ -1,6 +1,6 @@
 # Theory
 
-This page explains what the program computes. The complete rule set, with the cells of the original spreadsheet it was derived from, is in the [model specification](MODEL_SPEC.md).
+This page explains what the program computes. The complete rule set, with the cells of the spreadsheet it was derived from, is in the [model specification](MODEL_SPEC.md).
 
 ## The idea
 The domain is cut into cubes of 1 mm. Each cube is a control volume with one concentration \(C\). In every time step each cube exchanges solute with its six neighbours, in proportion to the concentration difference. This is a **finite-volume** scheme, **explicit** in time. Solute that leaves one cell enters the next, so mass is conserved.

@@ -81,9 +81,9 @@ END neighbor_overrides
 - `FIXED value`: the cell gets the constant.
 - `NOFLOW`: the same as `COPY 1.0` (no gradient, no flux through the side).
 
-A cell on two sides (an edge or a corner) takes the rule of the later line, and the cell it reads may itself be a boundary cell set by an earlier line. In the order above this is the spreadsheet's rule (rows first, then the far end, then the layers). A side without a line leaves its boundary cells at their start value (`STRT`); solid cells are never touched; a side index other than 1 or the last index is refused. The five-rule block is the whole boundary of the intended Reduced_Matrix set.
+A cell on two sides (an edge or a corner) takes the rule of the later line, and the cell it reads may itself be a boundary cell set by an earlier line. In the order above this is the spreadsheet's rule (rows first, then the far end, then the layers). A side without a line leaves its boundary cells at their start value (`STRT`); solid cells are never touched; a side index other than 1 or the last index is refused. The five-rule block is the whole boundary of the Reduced_Matrix set.
 
-**Exceptions.** `boundary_cells` lines are applied after all rules, so a rule cell that reads an exception cell sees the old value. They carried the boundary mistakes of the original spreadsheet (the 82 typed zeros and the corner cells next to them, MODEL_SPEC.md section 6), and `neighbor_overrides` carried its 861 shifted neighbours. The example set `data/reduced_matrix` needs neither list; they remain useful for any real exception.
+**Exceptions.** `boundary_cells` lines are applied after all rules, so a rule cell that reads an exception cell sees the old value. The example set `data/reduced_matrix` needs neither this list nor `neighbor_overrides`; they remain useful for any real exception.
 
 `DIR` is one of `+ROW -ROW +LAY -LAY +COL -COL`. **Default neighbours** of a fluid cell: the six face neighbours that are not solid; the `-COL` neighbour of an `ICOL = 1` cell under a source face is the source. The old `BEGIN boundarys` list is not read any more; `tools/convert_input.py` converts it to rules plus exceptions.
 
@@ -126,7 +126,7 @@ memdif3d <namefile> [--fresh] [--force] [--nperiods N] [--steps-per-period N] [-
 
 ## Generating and checking a set
 ```
-python3 tools/xlsx2memdif.py Reduced_Matrix.xlsx data/reduced_matrix
+python3 tools/xlsx2memdif.py Reduced_Matrix_fixed.xlsx data/reduced_matrix --name rm
 python3 tools/memdif_proto.py data/reduced_matrix/rm.nam
 ```
 `xlsx2memdif.py` derives the grid, domain codes, boundary rules, overrides, parameters and initial state from the sheet formulas and stops with a message if the sheet has a pattern it does not understand. `memdif_proto.py` reads only the text files, runs one step on a random field and compares with `tools/ref_step.py` (which was checked against the sheet formulas); it prints a difference of 0 for the Reduced_Matrix set.

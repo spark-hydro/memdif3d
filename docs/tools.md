@@ -5,8 +5,7 @@ Python scripts in `tools/`. The environment in `environment.yml` (`conda env cre
 ## Input
 | Script | What it does |
 |---|---|
-| `xlsx2memdif.py` | extracts a complete input set from the spreadsheet model (`python tools/xlsx2memdif.py Reduced_Matrix.xlsx data/reduced_matrix`) |
-| `fix_reduced_matrix_xlsx.py` | writes a corrected copy of `Reduced_Matrix.xlsx` (the last tile one column further right, the typed zeros replaced by formulas); the original is not changed |
+| `xlsx2memdif.py` | extracts a complete input set from the spreadsheet model (`python tools/xlsx2memdif.py Reduced_Matrix_fixed.xlsx data/reduced_matrix --name rm`) |
 | `make_holes.py` | copies a set and punches holes in the membrane (`--pitch`, `--size`, `--offset`, `--closed`) |
 | `convert_input.py` | converts the older list formats of faces and boundary to the faces map and boundary rules |
 | `make_test_case.py` | writes the small synthetic sets used by the tests |
@@ -32,12 +31,12 @@ For finer frames than one per day, run with `--snapshot-every 60` and animate th
 | Script | What it does |
 |---|---|
 | `memdif_proto.py` | prototype solver that reads the input files; run as a script, it compares one step with the reference step |
-| `expand_formulas.py`, `ref_step.py`, `test_vs_excel.py` | the reference rule and its check against the formulas of the spreadsheet (`expand_formulas.py Reduced_Matrix.xlsx` writes the `cells.json` that `test_vs_excel.py` reads; see `tools/README.md`) |
+| `expand_formulas.py`, `ref_step.py`, `test_vs_excel.py` | the reference rule and its check against the formulas of the spreadsheet (`expand_formulas.py Reduced_Matrix_fixed.xlsx` writes the `cells.json` that `test_vs_excel.py` reads; see `tools/README.md`) |
 | `compare_excel_block.py` | compares a field file with a block of values in a spreadsheet |
 
 ```bash
-memdif3d data/reduced_matrix/rm.nam --nperiods 1 --steps-per-period 576 --fresh
-python tools/compare_excel_block.py 3d_nonzeroboundry.xlsx field_001.csv --first-row 50694 --nam data/reduced_matrix/rm.nam
+memdif3d data/reduced_matrix/rm.nam --nperiods 1 --steps-per-period 1440 --fresh
+python tools/compare_excel_block.py Day_1440.xlsx field_001.csv --first-row 6 --nam data/reduced_matrix/rm.nam --fixed-layout
 ```
 
-`--first-row` is the first sheet row of the 43-row block; for a `Day_NNN.xlsx` file of the daily macro it is 6. For files made from the corrected workbook add `--fixed-layout`.
+`--first-row` is the first sheet row of the 43-row block; for a `Day_NNN.xlsx` file of the daily macro it is 6. For the workbook `Reduced_Matrix_fixed.xlsx` add `--fixed-layout`.

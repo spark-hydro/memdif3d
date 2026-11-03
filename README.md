@@ -28,7 +28,7 @@ Current limits: one source cell touching the membrane, one uniform sand and memb
 |---|---|
 | `src/` | Fortran source |
 | `docs/` | the manual (MkDocs, `mkdocs.yml`) |
-| `excel/` | `DailyRun.bas`, VBA that runs the spreadsheet model one day at a time (used to produce reference results) |
+| `excel/` | `DailyRun_fixed.bas`, VBA that runs the spreadsheet model one day at a time (used to produce reference results) |
 | `tools/` | Python: input converters and generators, prototype solver, plots, animations, comparison with the spreadsheet |
 | `data/reduced_matrix/` | the example input set (`rm.nam`, `rm.dis`, ...), generated from the corrected workbook `Reduced_Matrix_fixed.xlsx` |
 | `tests/` | regression tests (run by `ctest`) |

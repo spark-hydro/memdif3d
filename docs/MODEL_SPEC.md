@@ -1,7 +1,7 @@
 # memdif3d model spec for the Fortran port
 
-Extracted from the formulas in `Reduced_Matrix.xlsx` (block 2, rows 50:92, which is "time t+1 from time t = rows 6:48").
-**Validated:** the rule set below, including the two spreadsheet quirks in section 6, reproduces every formula cell of the sheet on a random concentration field to rounding error (max abs difference 2e-16 over 28,109 fluid cells, plus the source cell). Scripts are in `tools/`.
+Extracted from the formulas in `Reduced_Matrix_fixed.xlsx` (block 2, rows 50:92, which is "time t+1 from time t = rows 6:48").
+**Validated:** the rule set below, reproduces every formula cell of the sheet on a random concentration field to rounding error (max abs difference 2e-16 over 28,109 fluid cells, plus the source cell). Scripts are in `tools/`.
 
 **MODFLOW names for the same axes:** X = row (IROW = X), Y = layer (ILAY = Y + 1, the slices), Z = column (ICOL = Z + 1, away from the source); the input files use these names (docs/INPUT_SPEC.md). The rest of this note keeps the X, Y, Z names of the recording.
 
@@ -36,8 +36,8 @@ Explicit stability: need `6*ks + |v| <= 1` (and `5*ks + km + ... <= 1` next to t
 
 ## 3. Grid and index mapping
 Cell (X, Y, Z). Sheet column of (Y, Z): `col = base(Y) + Z`, with
-`base(Y) = 1 + 26*Y` for Y = 0..6; `157 + 27*(Y-6)` for Y = 7..27; `750` for Y = 28.
-(Slice stride is 26 columns for Y <= 6, 27 from Y = 6 to 7 up to 27, and 26 from 27 to 28; see quirk 1.)
+`base(Y) = 1 + 26*Y` for Y = 0..6; `157 + 27*(Y-6)` for Y = 7..28.
+(Slice stride is 26 columns for Y <= 6 and 27 from Y = 6 onwards.)
 The M column of slice Y (Y = 7..21) is `base(Y) - 1` (that is Z = -1), rows X = 15..29.
 
 Regions:
@@ -66,18 +66,10 @@ CM' = CM - (Km / V) * sum over (X,Y) in F of ( CM - C(X,Y,0) )
 
 Boundary cells (computed AFTER the new fluid values and the new CM, in this order):
 1. `X = 1`, Y = 1..27, Z = 3..23: `0.82 * C'(2,Y,Z)`; `X = 43`: `0.82 * C'(42,Y,Z)`. (Z = 0..2 at X = 1/43 are solid constants 0.)
-2. `Z = 24`, Y = 1..27, X = 1..43: `0.82 * C'(X,Y,23)` (see quirk 2).
+2. `Z = 24`, Y = 1..27, X = 1..43: `0.82 * C'(X,Y,23)`.
 3. `Y = 0`: `0.82 * C'(X,1,Z)`; `Y = 28`: `0.82 * C'(X,27,Z)`, for all X = 1..43, Z = 0..24 (copies the new slice 1 / 27 incl. boundary cells and solid zeros).
 
 Boundary cells at time t+1 therefore depend on t+1 values of their interior neighbour; fluid cells at t+1 read boundary values from time t.
 
 ## 5. Initial condition
 `CM = 1` (the 225 M cells = 1), all fluid and boundary cells 0. The sheet's `GA17 = $GQ$1` and `GA61 = $GQ$1*GA64` are mass bookkeeping cells (V*C); nothing reads them, so the model does not need them.
-
-## 6. Mistakes in the original spreadsheet (corrected in `data/reduced_matrix`)
-The formulas deviate from the pattern in two places. Both are far from the source. The author of the sheet confirmed that both are mistakes. The input made from the original workbook (`xlsx2memdif.py Reduced_Matrix.xlsx`) carries them as exceptions (the 82 typed zeros and the corner cells next to them as `boundary_cells`, the 861 shifted neighbours as `neighbor_overrides`), so that it reproduces the original spreadsheet exactly. `data/reduced_matrix` follows the intended pattern and corresponds to the corrected workbook `Reduced_Matrix_fixed.xlsx` (`tools/fix_reduced_matrix_xlsx.py`). After 28 days the source concentration is 0.0914 in the corrected model against 0.0899 in the original.
-1. **Slice Y = 27 reads slice 28 shifted by one Z.** Its +Y neighbour formula uses a +27 column offset but the last slice stride is 26, so cell (X,27,Z) reads boundary (X,28,Z+1) instead of (X,28,Z). Affects 861 cells (X = 2..42, Z = 3..23).
-2. **Z = 24 boundary cell is a constant 0** (not 0.82*Z23) for slices `Y = 20` and `Y = 26`, rows X = 2..42 (82 cells). Corner rows X = 1 and 43 at Z = 24: slice 20 follows the normal rule (0.82*Z23), slice 26 reads the constant neighbour so it is 0.
-
-## 7. About `3d_nonzeroboundry.xlsx` (460 MB)
-Streamed, not opened. 50,736 rows, A:ACT, 44-row block period (1152 blocks) like the small file. But it is not a clean continuous chain: formula blocks appear in runs of about 9 every 18 blocks, with zero-valued or empty blocks in between, some formulas reach 440 rows (10 blocks) up, and 13,634 rows are missing entirely. Treat `Reduced_Matrix.xlsx` as the source of truth for the spec; ask the user how the big file was produced before relying on it.
