@@ -7,6 +7,7 @@ The model is copied to a temporary folder and a MINUTES block is added. Then:
 1. DIGITS 16: every minute block equals the snapshot file of the same step (--snapshot-every 1), start state included.
 2. DIGITS 6: values agree with the 16-digit ones to 5e-6 relative.
 3. FROM/TO/LAYERS: only the steps in the window and only the chosen layers are written, split over the periods.
+4. FIELD_DIGITS 6 in the options block: the field file has 6 significant digits and agrees with the 16-digit one.
 """
 import glob
 import os
@@ -71,7 +72,8 @@ def read_field(path):
     return out
 
 
-with tempfile.TemporaryDirectory() as t1, tempfile.TemporaryDirectory() as t2, tempfile.TemporaryDirectory() as t3:
+with tempfile.TemporaryDirectory() as t1, tempfile.TemporaryDirectory() as t2, tempfile.TemporaryDirectory() as t3, \
+        tempfile.TemporaryDirectory() as t4:
     # ---- 1 and 2
     n1 = model_copy(t1, '  DIGITS 16\n')
     run(t1, n1, '--nperiods', '2', '--snapshot-every', '1')
@@ -114,4 +116,23 @@ with tempfile.TemporaryDirectory() as t1, tempfile.TemporaryDirectory() as t2, t
     if any(h[2] != 43 or h[3] != 25 for h in h1 + h2):
         fail('NROW/NCOL in the header are wrong')
     print('window and layer selection ok')
+
+    # ---- 4
+    n4 = model_copy(t4, '')
+    oc = os.path.join(t4, [f for f in os.listdir(t4) if f.endswith('.oc')][0])
+    txt = open(oc).read()
+    txt = re.sub(r'(?i)begin options', 'BEGIN options\n  FIELD_DIGITS 6', txt, count=1)
+    open(oc, 'w').write(txt)
+    run(t4, n4, '--nperiods', '2')
+    short = open(os.path.join(t4, 'field_002.csv')).read()
+    toks = [t.strip() for line in short.splitlines() if not line.startswith('#') for t in line.split(',')]
+    if not all(re.fullmatch(r'-?\d\.\d{5}E[+-]\d{3}', t) for t in toks):
+        fail('field values do not have 6 significant digits')
+    full = read_field(os.path.join(t1, 'field_002.csv'))
+    part = read_field(os.path.join(t4, 'field_002.csv'))
+    for il in full:
+        for a, b in zip(part[il], full[il]):
+            if abs(a - b) > 5e-6 * abs(b):
+                fail('6-digit field differs from the 16-digit field')
+    print('FIELD_DIGITS ok')
 print('PASS')
