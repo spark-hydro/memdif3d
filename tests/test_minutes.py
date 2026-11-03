@@ -66,6 +66,8 @@ def read_minutes(path):
 
     ncol = 0
     for line in open(path):
+        if line.startswith('#') and not line.startswith('# STEP'):
+            continue                                   # layer label line of the HORIZONTAL layout
         if line.startswith('#'):
             flush()
             rows = []

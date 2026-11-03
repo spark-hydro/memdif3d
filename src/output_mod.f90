@@ -118,8 +118,10 @@ contains
     type(model_t), intent(in) :: m
     real(dp), intent(in) :: c(:)
     integer, intent(in) :: u, step
-    integer :: ir, il, ic, k
+    integer :: ir, il, ic, k, bw
     integer, allocatable :: lsel(:)
+    character(len=:), allocatable :: lab
+    character(len=16) :: ln
     character(len=:), allocatable :: fmt
     character(len=24) :: ts
     fmt = value_fmt(m%min_digits, ' ')
@@ -129,6 +131,16 @@ contains
     if (m%min_horizontal) then
       write (u, '(a,i0,a,a,a,a,a,i0,a,i0)') '# STEP ', step, ' TIME ', trim(ts), ' LAYERS ', layer_list(m%min_lay), &
         ' NROW ', m%nrow, ' NCOL ', m%ncol
+      ! label line: the layer number over the first value of each layer, '#' in the first position
+      bw = m%ncol * (m%min_digits + 8)
+      allocate (character(len=bw * size(lsel)) :: lab)
+      lab(:) = ''
+      do k = 1, size(lsel)
+        write (ln, '(a,i0)') 'ILAY ', lsel(k)
+        if (k == 1) ln = '#' // trim(ln)
+        lab((k - 1) * bw + 1:(k - 1) * bw + len_trim(ln)) = trim(ln)
+      end do
+      write (u, '(a)') lab
       do ir = 1, m%nrow
         write (u, fmt) ((c(lin(m, lsel(k), ir, ic)), ic=1, m%ncol), k=1, size(lsel))
       end do

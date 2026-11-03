@@ -44,12 +44,13 @@ Optional (`BEGIN minutes` in the OC file, see [Input files](INPUT_SPEC.md)). The
 
 ```text
 # STEP 17 TIME 17.000 LAYERS 1-29 NROW 43 NCOL 25
+#ILAY 1                  ...    ILAY 2                 ...    ILAY 29
  0.00000E+000 0.00000E+000 ... (29 layers x 25 values = 725 values per line, 43 lines)
 # STEP 18 TIME 18.000 LAYERS 1-29 NROW 43 NCOL 25
  ...
 ```
 
-Inside a line the values run along `ICOL` for layer 1, then layer 2, and so on. `LAYOUT VERTICAL` writes one tile of 43 lines per layer instead (header `# STEP 17 TIME 17.000 ILAY 3 NROW 43 NCOL 25`, the order of the MODFLOW head file records).
+The second line is a comment that names the layer over the first value of each layer block (it starts with `#`, so readers that skip comments ignore it). Inside a value line the values run along `ICOL` for layer 1, then layer 2, and so on. `LAYOUT VERTICAL` writes one tile of 43 lines per layer instead (header `# STEP 17 TIME 17.000 ILAY 3 NROW 43 NCOL 25`, the order of the MODFLOW head file records).
 
 With `DIGITS 16` the values equal those of a snapshot file of the same step. A start state is written as `STEP 0` when the window starts at 0. One step of the whole box is about 0.37 MB with 6 digits, so a day of 1440 minutes is about 0.54 GB; limit `FROM`, `TO` and `LAYERS` when you do not need everything.
 
