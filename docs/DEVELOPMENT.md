@@ -37,4 +37,4 @@ One source cell touching ICOL = 1; one uniform sand and membrane; cubic cells; a
 - Independent verification for a paper: an analytic benchmark, grid and time-step convergence, a comparison with another code.
 - A box generator (`tools/make_box_model.py`): one command writes a complete input set for a box with a rectangular source footprint.
 - A real membrane layer with its own cell size (needs non-uniform cells along `ICOL`).
-- The Windows program is built by CI but has not been run on a Windows computer.
+- The Windows program (static, `memdif3d.exe`) was run on a Windows computer with v0.2.1: 28 days of the example model, field and probe files identical to the Linux run (2026-11-02). Not checked on Windows: restart files and the `MINUTES` output.
