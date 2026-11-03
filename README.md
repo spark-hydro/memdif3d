@@ -48,7 +48,7 @@ docker pull ghcr.io/spark-hydro/memdif3d:latest
 docker run --rm --user "$(id -u):$(id -g)" -v "$PWD":/work ghcr.io/spark-hydro/memdif3d /opt/memdif3d/data/reduced_matrix/rm.nam   # the example in the image
 ```
 For your own model, give the path of its name file (inside the mounted folder): `... -v "$PWD":/work ghcr.io/spark-hydro/memdif3d my_model/rm.nam`.
-The image (about 530 MB) includes numpy, matplotlib and plotly for the plotting tools. A small image without them (`:slim`, about 190 MB) installs them on first use. See [docs/docker.md](docs/docker.md).
+The image (about 530 MB) includes numpy, matplotlib and plotly for the plotting tools. A small image without them (`:slim`, about 190 MB) installs them on first use. See [docs/docker.md](docs/docker.md). On Windows: [Docker on Windows, step by step](docs/docker-windows.md).
 
 ## Run
 ```

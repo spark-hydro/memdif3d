@@ -9,7 +9,7 @@ There are two images from the same Dockerfile:
 | `ghcr.io/spark-hydro/memdif3d:latest` (**full**) | about 530 MB | installed in the image (numpy, matplotlib, Pillow, plotly) | everyone; works offline, nothing to install later |
 | `ghcr.io/spark-hydro/memdif3d:slim` | about 190 MB | installed on first use of a plotting tool | running only the model on a server, or when size matters |
 
-Start with the full image. Everything below works with it; the slim image has one extra option (see the end).
+On Windows, follow the step-by-step guide [Docker on Windows](docker-windows.md). Start with the full image. Everything below works with it; the slim image has one extra option (see the end).
 
 ## Get the image
 ```bash
