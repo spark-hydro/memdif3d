@@ -39,8 +39,8 @@ def read_field(path):
 ## Snapshot files: `snap_0000060.csv`, ...
 The same format as a field file, written every N steps inside a run (`SNAPSHOT FILEOUT snap_{step}.csv EVERY 60` in the OC file, or `--snapshot-every 60`). The step number in the name has seven digits, so the files sort in time order. A snapshot is about 0.75 MB with the default 16 digits (`FIELD_DIGITS` in the OC file gives fewer) for the Reduced_Matrix grid. Use them for finer animations (`--pattern 'snap_*.csv'`).
 
-## Minutes files: `minutes_001.txt`, ...
-Optional (`BEGIN minutes` in the OC file, see [Input files](INPUT_SPEC.md)). The field at every time step of a window, one file per period, as blank-separated text with 6 significant digits unless `DIGITS` says otherwise. The default layout puts the layers side by side, one block per step (as in the Excel workbook):
+## Day files: `day_001.txt`, ...
+Optional (`BEGIN minutes` in the OC file, see [Input files](INPUT_SPEC.md)). The field at every time step of a window, one file per period (`day_001.txt` is period 1, which is a day when TDIS has 1440 steps of one minute; the TDIS file has no calendar dates), as blank-separated text (`FORMAT CSV` gives comma-separated values in `day_001.csv`) with 6 significant digits unless `DIGITS` says otherwise. The default layout puts the layers side by side, one block per step (as in the Excel workbook):
 
 ```text
 # STEP 17 TIME 17.000 LAYERS 1-29 NROW 43 NCOL 25

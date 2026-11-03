@@ -45,8 +45,9 @@ module input_mod
     integer :: field_digits = 16                           ! significant digits of field and snapshot files
     ! minutes output: every step in a time window, selected layers (MINUTES block of the OC file)
     logical :: has_min = .false.
-    character(len=256) :: min_out = 'minutes_{period}.txt'
+    character(len=256) :: min_out = 'day_{period}.txt'
     integer :: min_digits = 6
+    logical :: min_csv = .false.                           ! comma-separated instead of blank-separated
     logical :: min_horizontal = .true.                    ! layers side by side in each row (else one tile per layer)
     real(dp) :: min_from = 0.0_dp, min_to = huge(1.0_dp)    ! minutes of simulated time, both included
     logical, allocatable :: min_lay(:)                      ! (nlay) layers to write
@@ -324,6 +325,7 @@ contains
     type(str_t), allocatable :: nam(:), t(:)
     character(len=:), allocatable :: dir, f
     character(len=64) :: ws
+    logical :: fo_given
     character(len=:), allocatable :: w
     real(dp), allocatable :: buf(:), advmask(:), fbuf(:), tfac(:)
     integer, allocatable :: tcell(:), tsrc(:)
@@ -631,6 +633,7 @@ contains
       call find_block(t, nt, 'minutes', i0, i1, found)
       if (found) then
         m%has_min = .true.
+        fo_given = .false.
         allocate (m%min_lay(m%nlay))
         m%min_lay = .true.
         do i = i0, i1
@@ -638,6 +641,11 @@ contains
           select case (w)
           case ('fileout')
             m%min_out = word(t(i)%s, 2)
+            fo_given = .true.
+          case ('format')
+            ws = lower(word(t(i)%s, 2))
+            if (ws /= 'text' .and. ws /= 'csv') call fatal('MINUTES FORMAT must be TEXT or CSV')
+            m%min_csv = (ws == 'csv')
           case ('digits')
             m%min_digits = to_int(word(t(i)%s, 2), ios)
             if (ios /= 0 .or. m%min_digits < 2 .or. m%min_digits > 17) call fatal('MINUTES DIGITS must be 2 to 17')
@@ -660,6 +668,7 @@ contains
           end select
         end do
         if (m%min_to < m%min_from) call fatal('MINUTES TO is before FROM')
+        if (.not. fo_given .and. m%min_csv) m%min_out = 'day_{period}.csv'
       end if
       call find_block(t, nt, 'probes', i0, i1, found)
       if (found) then

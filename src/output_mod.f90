@@ -124,7 +124,7 @@ contains
     character(len=16) :: ln
     character(len=:), allocatable :: fmt
     character(len=24) :: ts
-    fmt = value_fmt(m%min_digits, ' ')
+    fmt = value_fmt(m%min_digits, merge(',', ' ', m%min_csv))
     lsel = pack([(il, il=1, m%nlay)], m%min_lay)
     write (ts, '(f0.3)') real(step, dp) * m%step_len
     if (ts(1:1) == '.') ts = '0' // ts

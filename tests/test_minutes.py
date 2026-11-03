@@ -78,7 +78,7 @@ def read_minutes(path):
             cur, ncol = (int(m.group(1)), lays), int(m.group(7))
             heads.append((cur, float(m.group(2)), int(m.group(6)), ncol))
         elif line.strip():
-            rows.append([float(t) for t in line.split()])
+            rows.append([float(t) for t in line.replace(',', ' ').split()])
     flush()
     return out, heads
 
@@ -97,13 +97,14 @@ def read_field(path):
 
 
 with tempfile.TemporaryDirectory() as t1, tempfile.TemporaryDirectory() as t2, tempfile.TemporaryDirectory() as t3, \
-        tempfile.TemporaryDirectory() as t4, tempfile.TemporaryDirectory() as t5:
+        tempfile.TemporaryDirectory() as t4, tempfile.TemporaryDirectory() as t5, \
+        tempfile.TemporaryDirectory() as t6:
     # ---- 1 and 2
     n1 = model_copy(t1, '  DIGITS 16\n')
     run(t1, n1, '--nperiods', '2', '--snapshot-every', '1')
     mins = {}
     for p in (1, 2):
-        d, _ = read_minutes(os.path.join(t1, f'minutes_{p:03d}.txt'))
+        d, _ = read_minutes(os.path.join(t1, f'day_{p:03d}.txt'))
         mins.update(d)
     steps = sorted({s for s, _ in mins})
     if steps != list(range(0, 2 * SPP + 1)):
@@ -119,7 +120,7 @@ with tempfile.TemporaryDirectory() as t1, tempfile.TemporaryDirectory() as t2, t
     run(t2, n2, '--nperiods', '2')
     worst = 0.0
     for p in (1, 2):
-        d, _ = read_minutes(os.path.join(t2, f'minutes_{p:03d}.txt'))
+        d, _ = read_minutes(os.path.join(t2, f'day_{p:03d}.txt'))
         for k, vals in d.items():
             ref = mins[k]
             for a, b in zip(vals, ref):
@@ -131,8 +132,8 @@ with tempfile.TemporaryDirectory() as t1, tempfile.TemporaryDirectory() as t2, t
     # ---- 3
     n3 = model_copy(t3, '  FROM 3\n  TO 7\n  LAYERS 14-15\n')
     run(t3, n3, '--nperiods', '2')
-    d1, h1 = read_minutes(os.path.join(t3, 'minutes_001.txt'))
-    d2, h2 = read_minutes(os.path.join(t3, 'minutes_002.txt'))
+    d1, h1 = read_minutes(os.path.join(t3, 'day_001.txt'))
+    d2, h2 = read_minutes(os.path.join(t3, 'day_002.txt'))
     got = [h[0] for h in h1 + h2]
     want = [(s, [14, 15]) for s in range(3, 8)]
     if got != want:
@@ -145,13 +146,22 @@ with tempfile.TemporaryDirectory() as t1, tempfile.TemporaryDirectory() as t2, t
     # the vertical layout holds the same numbers
     n5 = model_copy(t5, '  FROM 3\n  TO 7\n  LAYERS 14-15\n  LAYOUT VERTICAL\n')
     run(t5, n5, '--nperiods', '2')
-    v1, vh = read_minutes(os.path.join(t5, 'minutes_001.txt'))
-    v2, _ = read_minutes(os.path.join(t5, 'minutes_002.txt'))
+    v1, vh = read_minutes(os.path.join(t5, 'day_001.txt'))
+    v2, _ = read_minutes(os.path.join(t5, 'day_002.txt'))
     if vh[0][0] != (3, [14]):
         fail('vertical header wrong')
     if {**v1, **v2} != {**d1, **d2}:
         fail('vertical layout differs from the horizontal layout')
     print('LAYOUT VERTICAL ok')
+
+    # csv: the default name ends in .csv, the numbers are those of the text file
+    n6 = model_copy(t6, '  FROM 3\n  TO 7\n  LAYERS 14-15\n  FORMAT CSV\n')
+    run(t6, n6, '--nperiods', '2')
+    c1, _ = read_minutes(os.path.join(t6, 'day_001.csv'))
+    c2, _ = read_minutes(os.path.join(t6, 'day_002.csv'))
+    if {**c1, **c2} != {**d1, **d2} or ',' not in open(os.path.join(t6, 'day_001.csv')).read():
+        fail('FORMAT CSV differs from the text file')
+    print('FORMAT CSV ok')
 
     # ---- 4
     n4 = model_copy(t4, '')
