@@ -16,7 +16,8 @@ The source concentration is drawn as column 0 next to the membrane. Linear or lo
 colour scale and the play speed can be changed in the page.
 Lower left: the probes. The files probes_*.csv of RUN_DIR (the cells and the source written every minute) are drawn
 as concentration against time, a line for every probe with a dot at every frame of the animation, and a vertical
-line at the time shown; a drop-down chooses one probe or all of them. The probe cells are marked in the 3D domain.
+line at the time shown; a drop-down chooses one probe or all of them. The probe cells are marked in the 3D domain and on the plane picture (when the plane contains them), in the colour of
+their line.
 --probes PATTERN changes the file pattern (default 'probes*.csv'), --no-probes leaves them out.
 
 Frames are the files of RUN_DIR that --pattern matches: field_*.csv (one per day, default), snap_*.csv, or the
@@ -240,6 +241,7 @@ try{
 }
 $('msg').style.display='none'; $('panels').style.display='grid';
 const PR=META.probes, HP=PR?968:600;
+const PAL=['#0f766e','#b45309','#7c3aed','#d4537e','#378add','#639922','#e24b4a','#5f5e5a'];
 if(!PR){$('probes').style.display='none';$('panels').classList.add('noprobe');}
 const LUT=new Float64Array(65536);
 for(let q=1;q<65536;q++) LUT[q]=Math.pow(10, LO+(q-1)/65534*(HI-LO));
@@ -278,9 +280,10 @@ for(const k of [1,2,3]){
 const bx=[],by=[],bz=[],bc=[];
 for(let il=1;il<=NL;il++)for(let ir=1;ir<=NR;ir++)for(let ic=1;ic<=NC;ic++){const c=IDOM[idx(il,ir,ic)]; if(c!==1){bx.push(ic);by.push(ir);bz.push(il);bc.push(c===0?'#555555':'#7aa7d9');}}
 if(PR){
-  const pl=PR.loc.map((l,k)=>l?{l,n:PR.names[k]}:null).filter(x=>x);
-  if(pl.length) tr.push({type:'scatter3d',mode:'markers',x:pl.map(o=>o.l[2]),y:pl.map(o=>o.l[1]),z:pl.map(o=>o.l[0]),text:pl.map(o=>o.n),
-    marker:{size:5,color:'#d4537e',symbol:'diamond'},name:'probe cells',hovertemplate:'probe %{text}<extra></extra>'});
+  const pl=PR.loc.map((l,k)=>l?{l,k,n:PR.names[k]}:null).filter(x=>x);
+  if(pl.length) tr.push({type:'scatter3d',mode:pl.length<=12?'markers+text':'markers',x:pl.map(o=>o.l[2]),y:pl.map(o=>o.l[1]),z:pl.map(o=>o.l[0]),text:pl.map(o=>o.n),
+    textposition:'top center',textfont:{size:11,color:fg},marker:{size:7,color:pl.map(o=>PAL[o.k%PAL.length]),symbol:'diamond',line:{color:fg,width:1}},
+    name:'probe cells',hovertemplate:'probe %{text}<br>ILAY %{z}, IROW %{y}, ICOL %{x}<extra></extra>'});
 }
 const iB=tr.length; tr.push({type:'scatter3d',mode:'markers',x:bx,y:by,z:bz,marker:{size:2,color:bc,opacity:.35},name:'boundary / solid cells',hoverinfo:'skip',visible:false});
 const iP=tr.length; tr.push({type:'mesh3d',x:[0,0,0,0],y:[0,0,0,0],z:[0,0,0,0],i:[0,0],j:[1,2],k:[2,3],color:'#0f766e',opacity:.45,name:'chosen plane',hoverinfo:'skip',showlegend:true});
@@ -312,6 +315,16 @@ function plane(t,k,f){
   return {xs,ys,z,xl,yl};
 }
 const NAME={layer:'Top view (MODFLOW xy): ILAY = ',row:'Row section (MODFLOW xz): IROW = ',column:'Column plane (MODFLOW yz): ICOL = '};
+function probeMarks(t,k){          // the probe cells that lie on the plane shown
+  if(!PR) return [];
+  const x=[],y=[],c=[],n=[];
+  PR.loc.forEach((l,j)=>{ if(!l) return; const [il,ir,ic]=l;
+    if(t==='layer'&&il===k){x.push(ic);y.push(ir);} else if(t==='row'&&ir===k){x.push(ic);y.push(il);} else if(t==='column'&&ic===k){x.push(ir);y.push(il);} else return;
+    c.push(PAL[j%PAL.length]);n.push(PR.names[j]); });
+  if(!x.length) return [];
+  return [{type:'scatter',mode:'markers+text',x:x,y:y,text:n,textposition:'top center',textfont:{size:11,color:'#ffffff'},
+    marker:{size:11,color:c,symbol:'diamond',line:{color:'#ffffff',width:2}},showlegend:false,hovertemplate:'probe %{text}<extra></extra>'}];
+}
 function draw(){
   const t=$('ptype').value,k=sel[t],p=plane(t,k,fr),log=$('scale').value==='log';
   let vmax=parseFloat($('vmax').value); if(!(vmax>0)) vmax=META.vmax;
@@ -320,7 +333,7 @@ function draw(){
   const cb=log?{tickvals:[-4,-3,-2,-1,0].map(d=>Math.log10(vmax)+d),ticktext:[-4,-3,-2,-1,0].map(d=>(vmax*Math.pow(10,d)).toPrecision(2)),title:{text:'concentration'}}:{title:{text:'concentration'}};
   const trace={type:'heatmap',x:p.xs,y:p.ys,z:zz,customdata:p.z,colorscale:'Viridis',zmin:log?Math.log10(vmin):0,zmax:log?Math.log10(vmax):vmax,
     zsmooth:false,hoverongaps:false,colorbar:cb,hovertemplate:p.xl.split(' ')[0]+' %{x}, '+p.yl+' %{y}<br>C = %{customdata:.4g}<extra></extra>'};
-  Plotly.react('plane2d',[trace],{paper_bgcolor:'rgba(0,0,0,0)',plot_bgcolor:'#c8c8c8',font:{color:fg},height:HP,margin:{l:55,r:10,t:40,b:50},
+  Plotly.react('plane2d',[trace,...probeMarks(t,k)],{paper_bgcolor:'rgba(0,0,0,0)',plot_bgcolor:'#c8c8c8',font:{color:fg},height:HP,margin:{l:55,r:10,t:40,b:50},
     title:{text:NAME[t]+k+' &nbsp; minute '+META.minutes[fr]+day(META.minutes[fr])+', source = '+META.cm[fr].toPrecision(4),font:{size:13}},
     xaxis:{title:p.xl,constrain:'domain',range:t==='column'?[.5,NR+.5]:[-.5,NC+.5]},
     yaxis:{title:p.yl,scaleanchor:'x',constrain:'domain',range:t==='layer'?[.5,NR+.5]:[.5,NL+.5]}},{responsive:true});
@@ -345,7 +358,6 @@ $('speed').onchange=()=>{if(timer){clearInterval(timer);timer=setInterval(step,+
 window.__viewer={sel,get fr(){return fr;},setFrame:i=>{fr=i;$('tsl').value=i;draw();},NF};
 
 // ---- probes: concentration against time ----
-const PAL=['#0f766e','#b45309','#7c3aed','#d4537e','#378add','#639922','#e24b4a','#5f5e5a'];
 function markTime(){ if(PR) Plotly.relayout('probes',{'shapes[0].x0':META.minutes[fr],'shapes[0].x1':META.minutes[fr]}); }
 function probeScale(){ if(PR) Plotly.relayout('probes',{'yaxis.type':$('scale').value==='log'?'log':'linear'}); }
 if(PR){
