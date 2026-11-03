@@ -35,8 +35,14 @@ docker run --rm hello-world
 
 The second command downloads a tiny test image and prints *Hello from Docker!*. If it does, Docker works.
 
-!!! tip "Linux containers"
-    Docker Desktop must be in **Linux containers** mode (the default). Right-click the whale icon: if the menu says *Switch to Linux containers*, click it. The memdif3d image is a Linux image.
+!!! tip "Linux containers (usually nothing to do)"
+    The memdif3d image is a Linux image, so Docker Desktop must be in **Linux containers** mode. This is the default, and it is the only mode when Docker uses WSL 2 (step 1), so most people have nothing to do here. To check, type in PowerShell:
+
+    ```powershell
+    docker info --format "{{.OSType}}"
+    ```
+
+    If it prints `linux`, you are done. Only if it prints `windows`, right-click the whale icon in the taskbar (it may be hidden behind the small arrow `^` near the clock) and choose **Switch to Linux containers**. If the menu says *Switch to Windows containers* instead, Docker is already in Linux mode, so do not click it.
 
 ## 2. Get memdif3d
 
@@ -242,7 +248,7 @@ The helper prints that line for every command. `..\memdif.cmd tool script.py ...
 | Message or problem | What to do |
 |---|---|
 | `error during connect` or `cannot connect to the Docker daemon` | Docker Desktop is not running. Start it and wait for *Engine running*. |
-| `no matching manifest for windows/amd64` | Docker Desktop is in Windows containers mode. Right-click the whale icon, *Switch to Linux containers*. |
+| `no matching manifest for windows/amd64` | Docker Desktop is in Windows containers mode. Check with `docker info --format "{{.OSType}}"`; if it says `windows`, right-click the whale icon and choose *Switch to Linux containers*. |
 | `'..\memdif.cmd' is not recognized` | Check the folder you are in (`pwd`) and that `memdif.cmd` is in `C:\memdif3d` (step 3). |
 | `memdif: no .nam file in ...` | The model folder is empty or elsewhere: run `..\memdif.cmd newmodel`, or set `MEMDIF_MODEL`. |
 | `[memdif3d] cannot find the model file` | The model folder has no `.nam` file of that name; check `dir C:\memdif3d\mymodel`. |
