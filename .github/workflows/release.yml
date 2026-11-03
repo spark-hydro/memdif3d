@@ -32,13 +32,22 @@ jobs:
           version: ${{ matrix.version }}
 
       - name: Configure
-        run: cmake -B build -G "${{ matrix.generator }}" -D CMAKE_Fortran_COMPILER=${{ env.FC }} -D CMAKE_BUILD_TYPE=Release
+        run: cmake -B build -G "${{ matrix.generator }}" -D CMAKE_Fortran_COMPILER=${{ env.FC }} -D CMAKE_BUILD_TYPE=Release -D MEMDIF3D_STATIC=ON
 
       - name: Build
         run: cmake --build build --parallel 4
 
       - name: Test
         run: ctest --test-dir build --output-on-failure --no-tests=error
+
+      - name: Check that the Windows program needs no MinGW runtime DLLs
+        if: matrix.name == 'gnu-windows'
+        shell: bash
+        run: |
+          objdump -p build/memdif3d.exe | grep "DLL Name"
+          if objdump -p build/memdif3d.exe | grep -iE "DLL Name: (libgfortran|libgcc|libquadmath|libwinpthread)"; then
+            echo "memdif3d.exe depends on a MinGW runtime DLL"; exit 1
+          fi
 
       - name: Package
         working-directory: build

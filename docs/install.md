@@ -38,7 +38,7 @@ cmake --preset gfortran_release_windows
 cmake --build build/release
 ```
 
-The Windows build has not been run on GitHub yet.
+The Windows program on the releases page is linked statically, so it runs on a computer without MSYS2 or gfortran. A program you build yourself in MSYS2 needs `libgfortran-5.dll`, `libgcc_s_seh-1.dll`, `libquadmath-0.dll` and `libwinpthread-1.dll` (they are in the `ucrt64\bin` folder of MSYS2) on the `PATH`; add `-D MEMDIF3D_STATIC=ON` to the `cmake` command to link them in.
 
 ## Docker
 A container image with the model and the Python tools avoids all of this: see [Run with Docker](docker.md).

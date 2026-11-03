@@ -6,6 +6,7 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
 endif()
 
 option(MEMDIF3D_OPENMP "Build with OpenMP" OFF)
+option(MEMDIF3D_STATIC "Link the Fortran and GCC runtime statically (release programs)" OFF)
 
 set(CMAKE_Fortran_MODULE_DIRECTORY ${CMAKE_BINARY_DIR}/mod)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
@@ -61,6 +62,15 @@ if(CMAKE_Fortran_COMPILER_ID STREQUAL "GNU")
   target_compile_options(memdif3d PRIVATE
     "$<$<CONFIG:Debug>:-g;-O0;-fcheck=all;-fbacktrace;-ffpe-trap=invalid,zero,overflow>"
     "$<$<CONFIG:Release>:-O3>")
+  # release programs must run on a computer without gfortran: link the Fortran/GCC runtime statically
+  # (Windows: everything, so no libgfortran-5.dll etc. is needed next to memdif3d.exe)
+  if(MEMDIF3D_STATIC)
+    if(WIN32)
+      target_link_options(memdif3d PRIVATE -static)
+    else()
+      target_link_options(memdif3d PRIVATE -static-libgfortran -static-libgcc)
+    endif()
+  endif()
 elseif(CMAKE_Fortran_COMPILER_ID MATCHES "Intel")
   if(WIN32)
     target_compile_options(memdif3d PRIVATE
