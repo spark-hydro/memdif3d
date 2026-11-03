@@ -50,6 +50,7 @@ COPY --from=build /memdif3d-debug /usr/local/bin/memdif3d-debug
 COPY tools /opt/memdif3d/tools
 COPY data /opt/memdif3d/data
 COPY docker/requirements.txt /opt/memdif3d/requirements.txt
+COPY docker/memdif.sh docker/memdif.cmd /opt/memdif3d/scripts/
 COPY docker/entrypoint.sh /usr/local/bin/memdif3d-entrypoint
 # /opt/pyenv holds the Python packages (installed on first use in slim); it is writable for any user, and a volume mounted there keeps them
 RUN chmod +x /opt/memdif3d/tools/*.py /usr/local/bin/memdif3d-entrypoint \
