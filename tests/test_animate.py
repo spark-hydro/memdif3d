@@ -92,4 +92,14 @@ with tempfile.TemporaryDirectory() as d, tempfile.TemporaryDirectory() as md:
         if r.returncode == 0:
             sys.exit('FAIL: two planes at once must be refused')
         print('3D page: block, planes and refusal ok')
+    out = os.path.join(d, 'views.gif')
+    r = subprocess.run([sys.executable, script, d, '--nam', mnam, '--pattern', 'day_*.txt', '--every', '10', '--ilay', '15',
+                        '--icol', '3', '--out', out, '--dpi', '40'], capture_output=True, text=True)
+    if r.returncode != 0 or 'face on, side on' not in r.stdout:
+        sys.exit('FAIL: --ilay/--icol view options failed\n' + r.stdout + r.stderr)
+    r = subprocess.run([sys.executable, script, d, '--nam', mnam, '--pattern', 'day_*.txt', '--ilay', '15', '--irow', '22',
+                        '--out', os.path.join(d, 'y.gif')], capture_output=True, text=True)
+    if r.returncode == 0:
+        sys.exit('FAIL: --ilay with --irow must be refused')
+    print('MODFLOW view options ok')
 print('PASS')

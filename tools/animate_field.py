@@ -7,6 +7,11 @@
 
 Needs: numpy, matplotlib, Pillow   (pip install numpy matplotlib pillow)
 
+Choose the planes with MODFLOW names (each one switches its panel on, the others off):
+  --ilay N   top view (MODFLOW xy): layer N, rows x columns          --icol N   column plane (yz): ICOL = N, rows x layers
+  --irow N   row section (MODFLOW xz): row N, layers x columns       (--ilay and --irow share the side panel)
+  python3 animate_field.py RUN_DIR --nam rm.nam --ilay 15 --icol 3 --out views.gif
+
 Views (axis names follow docs/MODEL_SPEC.md: X = rows = IROW, Y = slices = ILAY, Z = away from the source = ICOL)
   face  XY plane at one Z layer (default: the first layer beyond the plate; --face-z 1 shows the
         cells touching the membrane); the white dashed box is the source footprint.
@@ -159,6 +164,9 @@ def main():
     ap.add_argument('--out', default='solute.gif')
     ap.add_argument('--face', type=on_off, default=True, metavar='on|off', help='face view (default on)')
     ap.add_argument('--side', type=on_off, default=True, metavar='on|off', help='side view (default on)')
+    ap.add_argument('--ilay', type=int, default=None, help='top view (MODFLOW xy): the layer ILAY, rows x columns')
+    ap.add_argument('--irow', type=int, default=None, help='row section (MODFLOW xz): the row IROW, layers x columns')
+    ap.add_argument('--icol', type=int, default=None, help='column plane (MODFLOW yz): ICOL = N, rows x layers (same as --face-z)')
     ap.add_argument('--face-z', type=int, default=None,
                     help='ICOL layer of the face view (default: first layer where most cells are fluid, or 1)')
     ap.add_argument('--side-plane', choices=['xz', 'yz'], default='xz')
@@ -174,6 +182,18 @@ def main():
     ap.add_argument('--show-boundary', action='store_true')
     ap.add_argument('--no-initial', action='store_true', help='do not add the initial state as first frame')
     a = ap.parse_args()
+    # MODFLOW names: --ilay / --irow / --icol choose the plane and switch on just the panels asked for
+    if a.ilay is not None and a.irow is not None:
+        sys.exit('choose --ilay (top view) or --irow (row section) for the side panel, not both')
+    if a.ilay is not None or a.irow is not None or a.icol is not None:
+        a.side = a.ilay is not None or a.irow is not None
+        a.face = a.icol is not None
+        if a.ilay is not None:
+            a.side_plane, a.slice = 'xz', a.ilay
+        if a.irow is not None:
+            a.side_plane, a.slice = 'yz', a.irow
+        if a.icol is not None:
+            a.face_z = a.icol
     if not (a.face or a.side):
         sys.exit('nothing to draw: switch at least one of --face / --side on')
 
@@ -262,23 +282,23 @@ def main():
         ims['face'] = ax.imshow(face_img(arr0, hidden), origin='lower', cmap=cmap, norm=norm, aspect='equal',
                                 extent=(0.5, nx + 0.5, 0.5, ny + 0.5), interpolation='nearest')
         ax.set_xlabel('IROW (row)')
-        ax.set_ylabel('ILAY (column)')
-        ax.set_title(f'face view  (XY, ICOL = {a.face_z})', fontsize=10)
+        ax.set_ylabel('ILAY (layer)')
+        ax.set_title(f'column plane, MODFLOW yz  (ICOL = {a.face_z})', fontsize=10)
         if box:
             ax.add_patch(Rectangle((box[0] - 0.5, box[2] - 0.5), box[1] - box[0] + 1, box[3] - box[2] + 1,
                                    fill=False, ec='white', ls='--', lw=1))
     if a.side:
         ax = axes[ai]
         if a.side_plane == 'xz':
-            k, nrow, ylab, what = (a.slice or cy), nx, 'IROW (row)', f'ILAY = {a.slice or cy}'
+            k, nrow, ylab, what = (a.slice or cy), nx, 'IROW (row)', f'top view, MODFLOW xy  (ILAY = {a.slice or cy})'
         else:
-            k, nrow, ylab, what = (a.slice or cx), ny, 'ILAY (column)', f'IROW = {a.slice or cx}'
+            k, nrow, ylab, what = (a.slice or cx), ny, 'ILAY (layer)', f'row section, MODFLOW xz  (IROW = {a.slice or cx})'
         ims['side'] = ax.imshow(side_img(arr0, hidden, info0['cm']), origin='lower', cmap=cmap, norm=norm, aspect='equal',
                                 extent=(-0.5, nz + 0.5, 0.5, nrow + 0.5), interpolation='nearest')
         ax.axvline(0.5, color='white', lw=0.8)
-        ax.set_xlabel('ICOL (Z; 0 = source cell)')
+        ax.set_xlabel('ICOL (0 = source cell)')
         ax.set_ylabel(ylab)
-        ax.set_title(f'side view  ({a.side_plane.upper()}, {what})', fontsize=10)
+        ax.set_title(what, fontsize=10)
     cb = fig.colorbar(next(iter(ims.values())), ax=list(axes), shrink=0.85)
     cb.set_label('concentration' + (' (log scale)' if a.log else ''))
     title = fig.suptitle('', fontsize=11)

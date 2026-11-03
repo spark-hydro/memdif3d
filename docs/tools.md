@@ -29,7 +29,15 @@ For finer frames than one per day, run with `--snapshot-every 60` and animate th
 
 The minutes output can be animated directly: `--pattern 'day_*.txt'` (or `'day_*.csv'`) uses every minute of the day files as frames, and `--every N` keeps every N-th minute (`--every 60` is one frame an hour; the whole day at once would make a huge page). The source concentration is not in a day file, so keep `probes_NNN.csv` (with a `SOURCE` line) next to them. The day files must hold all layers.
 
-To see only part of the box in the 3D page, give a range with `--ilay`, `--irow` or `--icol` (1-based, both ends included): `--ilay 15-29` cuts the cloud open at the middle of the source. A single number draws one plane: `--ilay 15` (the layer through the source centre), `--irow 22`, or `--icol 3` (3 mm from the membrane). Only one of the three may be a single number. The GIF scripts have `--face-z`, `--side-plane` and `--slice` for the same purpose.
+To see only part of the box in the 3D page, give a range with `--ilay`, `--irow` or `--icol` (1-based, both ends included): `--ilay 15-29` cuts the cloud open at the middle of the source. A single number draws one plane: `--ilay 15` (the layer through the source centre), `--irow 22`, or `--icol 3` (3 mm from the membrane). Only one of the three may be a single number. The GIF scripts use MODFLOW names for the planes (`animate_field.py`; `animate_compare.py` has `--icol` and `--ilay`):
+
+| Option | View | You see |
+|---|---|---|
+| `--ilay N` | top view, MODFLOW xy: layer N | rows × columns |
+| `--irow N` | row section, MODFLOW xz: row N | layers × columns |
+| `--icol N` | column plane, MODFLOW yz: ICOL = N | rows × layers |
+
+Each option switches its own panel on and the others off, so `--ilay 15` gives the top view alone and `--ilay 15 --icol 3` gives both (`--ilay` and `--irow` share one panel). The older options `--face-z`, `--side-plane xz|yz` and `--slice` still work; their `xz` and `yz` are the lab axes, so `--side-plane xz` is the top view.
 
 ```bash
 python tools/animate_3d.py run1 --nam data/reduced_matrix/rm.nam --log --pattern 'day_*.txt' --every 60 --out solute3d.html

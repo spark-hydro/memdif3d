@@ -3,7 +3,7 @@
 
     python3 animate_compare.py RUN_A RUN_B --nam-a A.nam --nam-b B.nam --pattern 'snap_*.csv' --out compare.gif
 
-Rows: face view (XY at one Z layer) and side view (XZ section through the source). Columns: run A,
+Rows: column plane (MODFLOW yz, ICOL = --icol) and top view (MODFLOW xy, layer --ilay through the source). Columns: run A,
 run B, and B - A (red = B higher). Both runs need the same grid and the same frame files, so make them
 with the same --snapshot-every and period length. Colour scales are shared between A and B.
 
@@ -54,6 +54,8 @@ def main():
     ap.add_argument('--label-b', default='with holes')
     ap.add_argument('--pattern', default='field_*.csv')
     ap.add_argument('--every', type=int, default=1)
+    ap.add_argument('--icol', type=int, default=None, help='same as --face-z (column plane, MODFLOW yz)')
+    ap.add_argument('--ilay', type=int, default=None, help='same as --slice (top view, MODFLOW xy: the layer of the side view)')
     ap.add_argument('--face-z', type=int, default=1, help='ICOL layer of the face view (default 1, touching the membrane)')
     ap.add_argument('--slice', type=int, default=None, help='ILAY of the side view (default: source centre)')
     ap.add_argument('--zmax', type=int, default=12, help='side view shows ICOL = 1..zmax (default 12)')
@@ -64,6 +66,10 @@ def main():
     ap.add_argument('--dpi', type=int, default=80)
     ap.add_argument('--out', default='compare.gif')
     a = ap.parse_args()
+    if a.icol is not None:
+        a.face_z = a.icol
+    if a.ilay is not None:
+        a.slice = a.ilay
 
     ma, fa, hid = load(a.run_a, a.nam_a, a.pattern, a.every)
     mb, fb, hidb = load(a.run_b, a.nam_b, a.pattern, a.every)
@@ -107,12 +113,12 @@ def main():
     for j, (fr, lab) in enumerate(((a0, a.label_a), (b0, a.label_b))):
         ims['f', j] = ax[0, j].imshow(shaped(face(fr[0])), origin='lower', cmap=cmap, norm=norm, extent=ext_f, interpolation='nearest')
         ims['s', j] = ax[1, j].imshow(shaped(side(fr[0], fr[1]['cm'])), origin='lower', cmap=cmap, norm=norm, extent=ext_s, interpolation='nearest')
-        ax[0, j].set_title(f'{lab}: face (XY, ICOL = {a.face_z})', fontsize=9)
-        ax[1, j].set_title(f'{lab}: side (XZ, ILAY = {iy})', fontsize=9)
+        ax[0, j].set_title(f'{lab}: column plane, yz (ICOL = {a.face_z})', fontsize=9)
+        ax[1, j].set_title(f'{lab}: top view, xy (ILAY = {iy})', fontsize=9)
     ims['f', 2] = ax[0, 2].imshow(face(a0[0] * 0), origin='lower', cmap=dmap, norm=dnorm, extent=ext_f, interpolation='nearest')
     ims['s', 2] = ax[1, 2].imshow(side(a0[0] * 0, 0.0), origin='lower', cmap=dmap, norm=dnorm, extent=ext_s, interpolation='nearest')
-    ax[0, 2].set_title('difference: face', fontsize=9)
-    ax[1, 2].set_title('difference: side', fontsize=9)
+    ax[0, 2].set_title('difference: column plane', fontsize=9)
+    ax[1, 2].set_title('difference: top view', fontsize=9)
     for j in range(3):
         ax[0, j].set_xlabel('IROW (row)')
         ax[0, j].set_ylabel('ILAY (column)')
