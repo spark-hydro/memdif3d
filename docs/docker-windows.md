@@ -65,35 +65,35 @@ You should see the banner with the version number. The image holds the program, 
 Make one folder that holds everything, with one folder for the model (input files) and one for each run (output files). The program writes its output into the folder where it is started, so a folder per run keeps the results apart:
 
 ```text
-C:\memdif3d\
+C:\Users\<your name>\memdif3d\        (in PowerShell: $HOME\memdif3d)
     memdif.cmd    the helper with the short commands
     mymodel\      the input files of your model (rm.nam, rm.dis, ...)
     run1\         the output of the first run
     run2\         the output of the next run
 ```
 
-In PowerShell:
+`$HOME` is your user folder, `C:\Users\<your name>` (type `echo $HOME` to see it). A folder there is your own, is not synced by OneDrive and does not clutter the drive root. In PowerShell:
 
 ```powershell
-mkdir C:\memdif3d\run1
+mkdir $HOME\memdif3d\run1
 ```
 
 ```powershell
-cd C:\memdif3d
+cd $HOME\memdif3d
 ```
 
-The helper is inside the image. Copy it into `C:\memdif3d`:
+The helper is inside the image. Copy it into your `memdif3d` folder:
 
 ```powershell
-docker run --rm -v ${PWD}:/work ghcr.io/spark-hydro/memdif3d cp /opt/memdif3d/scripts/memdif.cmd /work/
+docker run --rm -v "${PWD}:/work" ghcr.io/spark-hydro/memdif3d cp /opt/memdif3d/scripts/memdif.cmd /work/
 ```
 
-Docker Desktop may ask to share the folder the first time: allow it. The part `-v ${PWD}:/work` links the folder you are in (`${PWD}`) into the container as `/work`, so a file the container writes there is a normal Windows file. In the older `cmd` window write `%cd%` instead of `${PWD}`.
+Docker Desktop may ask to share the folder the first time: allow it. The part `-v "${PWD}:/work"` links the folder you are in (`${PWD}`) into the container as `/work`, so a file the container writes there is a normal Windows file. In the older `cmd` window write `%cd%` instead of `${PWD}`.
 
 From now on you work in a run folder and call the helper one level up. Try it:
 
 ```powershell
-cd C:\memdif3d\run1
+cd $HOME\memdif3d\run1
 ```
 
 ```powershell
@@ -110,7 +110,7 @@ It lists the commands: `run`, `view`, `domain`, `anim3d`, `gif`, `tool`, `newmod
 ..\memdif.cmd newmodel
 ```
 
-This copies the example model (the Reduced_Matrix case) from the image to `C:\memdif3d\mymodel`. `dir C:\memdif3d\mymodel` lists ten files: `rm.nam`, `rm.tdis`, `rm.dis`, `rm.ic`, `rm.dsp`, `rm.mst`, `rm.src`, `rm.adv`, `rm.bnd` and `rm.oc`.
+This copies the example model (the Reduced_Matrix case) from the image to `$HOME\memdif3d\mymodel`. `dir $HOME\memdif3d\mymodel` lists ten files: `rm.nam`, `rm.tdis`, `rm.dis`, `rm.ic`, `rm.dsp`, `rm.mst`, `rm.src`, `rm.adv`, `rm.bnd` and `rm.oc`.
 
 ### 4.2 Check the model before you run it
 
@@ -140,10 +140,10 @@ A membrane with holes can be made by a script. This copies the model and punches
 ..\memdif.cmd tool make_holes.py /model /work/holes --pitch 3 --size 2 --closed
 ```
 
-Move the folder `holes` to `C:\memdif3d\holes`. To run the copy instead of `mymodel`, give its folder once for the PowerShell window:
+Move the folder `holes` to `$HOME\memdif3d\holes`. To run the copy instead of `mymodel`, give its folder once for the PowerShell window:
 
 ```powershell
-$env:MEMDIF_MODEL = "C:\memdif3d\holes"
+$env:MEMDIF_MODEL = "$HOME\memdif3d\holes"
 ```
 
 ### 4.4 Write every minute of a time window (optional)
@@ -166,7 +166,7 @@ This gives `day_001.csv` with the first two hours. A whole day of the whole box 
 Go to the run folder and run:
 
 ```powershell
-cd C:\memdif3d\run1
+cd $HOME\memdif3d\run1
 ```
 
 ```powershell
@@ -238,7 +238,7 @@ Keep `probes_NNN.csv` next to the day files: the concentration of the source is 
 Each `memdif` command is one `docker run`. It links two folders into the container: the model folder, read-only, as `/model`, and the run folder as `/work`, where the output goes. For instance `..\memdif.cmd run --nperiods 2` is the same as
 
 ```powershell
-docker run --rm -v ${PWD}:/work -v C:\memdif3d\mymodel:/model:ro ghcr.io/spark-hydro/memdif3d /model/rm.nam --nperiods 2
+docker run --rm -v "${PWD}:/work" -v "${HOME}\memdif3d\mymodel:/model:ro" ghcr.io/spark-hydro/memdif3d /model/rm.nam --nperiods 2
 ```
 
 The helper prints that line for every command. `..\memdif.cmd tool script.py ...` runs any tool of the image the same way; the scripts are listed in [Tools](tools.md). Set `MEMDIF_MODEL` to use another model folder and `MEMDIF_IMAGE` to use another image. The image, the model and the results stay apart: the image never changes, and all your files are ordinary Windows folders.
@@ -249,12 +249,12 @@ The helper prints that line for every command. `..\memdif.cmd tool script.py ...
 |---|---|
 | `error during connect` or `cannot connect to the Docker daemon` | Docker Desktop is not running. Start it and wait for *Engine running*. |
 | `no matching manifest for windows/amd64` | Docker Desktop is in Windows containers mode. Check with `docker info --format "{{.OSType}}"`; if it says `windows`, right-click the whale icon and choose *Switch to Linux containers*. |
-| `'..\memdif.cmd' is not recognized` | Check the folder you are in (`pwd`) and that `memdif.cmd` is in `C:\memdif3d` (step 3). |
+| `'..\memdif.cmd' is not recognized` | Check the folder you are in (`pwd`) and that `memdif.cmd` is in your `memdif3d` folder (step 3). |
 | `memdif: no .nam file in ...` | The model folder is empty or elsewhere: run `..\memdif.cmd newmodel`, or set `MEMDIF_MODEL`. |
-| `[memdif3d] cannot find the model file` | The model folder has no `.nam` file of that name; check `dir C:\memdif3d\mymodel`. |
+| `[memdif3d] cannot find the model file` | The model folder has no `.nam` file of that name; check `dir $HOME\memdif3d\mymodel`. |
 | the output folder is empty | Output goes to the folder you start the command in. Start it in the run folder. |
 | `${PWD}` is not understood | You are in the old `cmd` window. Use PowerShell, or write `%cd%` instead of `${PWD}`. |
-| a path with spaces fails | Keep the folders under a path without spaces, for example `C:\memdif3d`. |
+| a path with spaces fails | Keep the quotes around the `-v` arguments, as in the commands of this page: `-v "${PWD}:/work"`. The helper `memdif.cmd` already does this. |
 | Docker asks to share a drive or folder | Allow it. In Docker Desktop: *Settings, Resources, File sharing*. |
 | the first start takes minutes | The first pull downloads about 530 MB and Docker Desktop starts its Linux engine. Later runs start in a second. |
 | the minutes output is slow | Writing hundreds of megabytes through a linked Windows folder is slower than a native disk. Use a time window (`FROM`, `TO`) or fewer layers (`LAYERS`). |

@@ -2,7 +2,7 @@
 rem memdif: short commands for the memdif3d Docker image (Windows; docker\memdif.sh is the Linux/macOS version).
 rem
 rem Put this file next to your model folder (default: mymodel next to this file) and run it from the run folder:
-rem    cd C:\memdif3d\run1
+rem    cd %USERPROFILE%\memdif3d\run1
 rem    ..\memdif run
 rem The model folder is linked read-only as /model, the current folder as /work (the output goes there).
 rem Set MEMDIF_MODEL to use another model folder, MEMDIF_IMAGE to use another image.
