@@ -11,4 +11,4 @@ ctest --test-dir build/release --output-on-failure
 build/release/memdif3d --version
 ```
 
-A release is made by pushing a tag `v*`: `git tag -a v0.1.2 -m "..." && git push origin v0.1.2` starts the release workflow (binaries, GitHub release, Docker images).
+A release is made by pushing a tag `v*`: `git tag -a v0.2.0 -m "..." && git push origin v0.2.0` starts the release workflow (binaries, GitHub release, Docker images).
