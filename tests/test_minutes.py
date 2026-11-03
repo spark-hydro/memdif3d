@@ -6,7 +6,8 @@
 The model is copied to a temporary folder and a MINUTES block is added. Then:
 1. DIGITS 16: every minute block equals the snapshot file of the same step (--snapshot-every 1), start state included.
 2. DIGITS 6: values agree with the 16-digit ones to 5e-6 relative.
-3. FROM/TO/LAYERS: only the steps in the window and only the chosen layers are written, split over the periods.
+3. FROM/TO/LAYERS: only the steps in the window and only the chosen layers are written, split over the periods;
+   LAYOUT VERTICAL holds the same numbers as the default HORIZONTAL layout.
 4. FIELD_DIGITS 6 in the options block: the field file has 6 significant digits and agrees with the 16-digit one.
 """
 import glob
@@ -43,19 +44,40 @@ def model_copy(dest, block):
     return os.path.join(dest, os.path.basename(nam))
 
 
+def layer_set(txt):
+    out = []
+    for part in txt.split(','):
+        lo, _, hi = part.partition('-')
+        out.extend(range(int(lo), int(hi or lo) + 1))
+    return out
+
+
 def read_minutes(path):
-    """{(step, ilay): list of values}, and the header lines in order"""
-    out, heads, cur = {}, [], None
+    """{(step, ilay): list of values (row by row)}, and the headers [((step, layers), time, nrow, ncol)] in order.
+    Reads both layouts: HORIZONTAL (LAYERS in the header, layers side by side) and VERTICAL (ILAY, one tile each)."""
+    out, heads, cur, rows = {}, [], None, []
+
+    def flush():
+        if cur is None:
+            return
+        step, lays = cur
+        for k, il in enumerate(lays):
+            out[(step, il)] = [v for r in rows for v in r[k * ncol:(k + 1) * ncol]]
+
+    ncol = 0
     for line in open(path):
         if line.startswith('#'):
-            m = re.match(r'# STEP (\d+) TIME (\S+) ILAY (\d+) NROW (\d+) NCOL (\d+)', line)
+            flush()
+            rows = []
+            m = re.match(r'# STEP (\d+) TIME (\S+) (LAYERS (\S+)|ILAY (\d+)) NROW (\d+) NCOL (\d+)', line)
             if not m:
                 fail('bad header: ' + line)
-            cur = (int(m.group(1)), int(m.group(3)))
-            heads.append((cur, float(m.group(2)), int(m.group(4)), int(m.group(5))))
-            out[cur] = []
+            lays = layer_set(m.group(4)) if m.group(4) else [int(m.group(5))]
+            cur, ncol = (int(m.group(1)), lays), int(m.group(7))
+            heads.append((cur, float(m.group(2)), int(m.group(6)), ncol))
         elif line.strip():
-            out[cur].extend(float(t) for t in line.split())
+            rows.append([float(t) for t in line.split()])
+    flush()
     return out, heads
 
 
@@ -73,7 +95,7 @@ def read_field(path):
 
 
 with tempfile.TemporaryDirectory() as t1, tempfile.TemporaryDirectory() as t2, tempfile.TemporaryDirectory() as t3, \
-        tempfile.TemporaryDirectory() as t4:
+        tempfile.TemporaryDirectory() as t4, tempfile.TemporaryDirectory() as t5:
     # ---- 1 and 2
     n1 = model_copy(t1, '  DIGITS 16\n')
     run(t1, n1, '--nperiods', '2', '--snapshot-every', '1')
@@ -110,12 +132,24 @@ with tempfile.TemporaryDirectory() as t1, tempfile.TemporaryDirectory() as t2, t
     d1, h1 = read_minutes(os.path.join(t3, 'minutes_001.txt'))
     d2, h2 = read_minutes(os.path.join(t3, 'minutes_002.txt'))
     got = [h[0] for h in h1 + h2]
-    want = [(s, il) for s in range(3, 8) for il in (14, 15)]
+    want = [(s, [14, 15]) for s in range(3, 8)]
     if got != want:
         fail(f'window/layers wrong: {got}')
     if any(h[2] != 43 or h[3] != 25 for h in h1 + h2):
         fail('NROW/NCOL in the header are wrong')
-    print('window and layer selection ok')
+    if {k for k in d1} | {k for k in d2} != {(s, il) for s in range(3, 8) for il in (14, 15)}:
+        fail('tiles missing')
+    print('window and layer selection ok (HORIZONTAL)')
+    # the vertical layout holds the same numbers
+    n5 = model_copy(t5, '  FROM 3\n  TO 7\n  LAYERS 14-15\n  LAYOUT VERTICAL\n')
+    run(t5, n5, '--nperiods', '2')
+    v1, vh = read_minutes(os.path.join(t5, 'minutes_001.txt'))
+    v2, _ = read_minutes(os.path.join(t5, 'minutes_002.txt'))
+    if vh[0][0] != (3, [14]):
+        fail('vertical header wrong')
+    if {**v1, **v2} != {**d1, **d2}:
+        fail('vertical layout differs from the horizontal layout')
+    print('LAYOUT VERTICAL ok')
 
     # ---- 4
     n4 = model_copy(t4, '')

@@ -47,6 +47,7 @@ module input_mod
     logical :: has_min = .false.
     character(len=256) :: min_out = 'minutes_{period}.txt'
     integer :: min_digits = 6
+    logical :: min_horizontal = .true.                    ! layers side by side in each row (else one tile per layer)
     real(dp) :: min_from = 0.0_dp, min_to = huge(1.0_dp)    ! minutes of simulated time, both included
     logical, allocatable :: min_lay(:)                      ! (nlay) layers to write
   end type model_t
@@ -648,6 +649,10 @@ contains
             ws = word(t(i)%s, 2)
             read (ws, *, iostat=ios) m%min_to
             if (ios /= 0) call fatal('MINUTES TO needs a number (minutes)')
+          case ('layout')
+            ws = lower(word(t(i)%s, 2))
+            if (ws /= 'horizontal' .and. ws /= 'vertical') call fatal('MINUTES LAYOUT must be HORIZONTAL or VERTICAL')
+            m%min_horizontal = (ws == 'horizontal')
           case ('layers')
             call parse_layers(t(i)%s, m%min_lay)
           case default

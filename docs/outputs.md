@@ -40,12 +40,16 @@ def read_field(path):
 The same format as a field file, written every N steps inside a run (`SNAPSHOT FILEOUT snap_{step}.csv EVERY 60` in the OC file, or `--snapshot-every 60`). The step number in the name has seven digits, so the files sort in time order. A snapshot is about 0.75 MB with the default 16 digits (`FIELD_DIGITS` in the OC file gives fewer) for the Reduced_Matrix grid. Use them for finer animations (`--pattern 'snap_*.csv'`).
 
 ## Minutes files: `minutes_001.txt`, ...
-Optional (`BEGIN minutes` in the OC file, see [Input files](INPUT_SPEC.md)). The field at every time step of a window, one file per period, as blank-separated text with 6 significant digits unless `DIGITS` says otherwise. Each selected layer of each step is a tile with its own header, in time order (the same order as the MODFLOW head file records):
+Optional (`BEGIN minutes` in the OC file, see [Input files](INPUT_SPEC.md)). The field at every time step of a window, one file per period, as blank-separated text with 6 significant digits unless `DIGITS` says otherwise. The default layout puts the layers side by side, one block per step (as in the Excel workbook):
 
 ```text
-# STEP 17 TIME 17.000 ILAY 3 NROW 43 NCOL 25
- 0.00000E+000 0.00000E+000 ... (25 values per line, 43 lines)
+# STEP 17 TIME 17.000 LAYERS 1-29 NROW 43 NCOL 25
+ 0.00000E+000 0.00000E+000 ... (29 layers x 25 values = 725 values per line, 43 lines)
+# STEP 18 TIME 18.000 LAYERS 1-29 NROW 43 NCOL 25
+ ...
 ```
+
+Inside a line the values run along `ICOL` for layer 1, then layer 2, and so on. `LAYOUT VERTICAL` writes one tile of 43 lines per layer instead (header `# STEP 17 TIME 17.000 ILAY 3 NROW 43 NCOL 25`, the order of the MODFLOW head file records).
 
 With `DIGITS 16` the values equal those of a snapshot file of the same step. A start state is written as `STEP 0` when the window starts at 0. One step of the whole box is about 0.37 MB with 6 digits, so a day of 1440 minutes is about 0.54 GB; limit `FROM`, `TO` and `LAYERS` when you do not need everything.
 

@@ -83,25 +83,65 @@ contains
     close (u)
   end subroutine write_field
 
-  ! one step of the minutes file: a header line per selected layer, then its rows (values separated by blanks)
+  ! selected layers as a compact list, e.g. 1-5,9
+  function layer_list(sel) result(r)
+    logical, intent(in) :: sel(:)
+    character(len=:), allocatable :: r
+    character(len=32) :: b
+    integer :: i, j
+    r = ''
+    i = 1
+    do while (i <= size(sel))
+      if (.not. sel(i)) then
+        i = i + 1
+        cycle
+      end if
+      j = i
+      do while (j < size(sel))
+        if (.not. sel(j + 1)) exit
+        j = j + 1
+      end do
+      if (j > i) then
+        write (b, '(i0,a,i0)') i, '-', j
+      else
+        write (b, '(i0)') i
+      end if
+      if (len(r) > 0) r = r // ','
+      r = r // trim(b)
+      i = j + 1
+    end do
+  end function layer_list
+
+  ! one step of the minutes file. HORIZONTAL: a header, then one line per IROW with the selected layers side by
+  ! side (ICOL fastest inside each layer). VERTICAL: a header and a tile of NROW lines per selected layer.
   subroutine write_minutes(m, c, u, step)
     type(model_t), intent(in) :: m
     real(dp), intent(in) :: c(:)
     integer, intent(in) :: u, step
-    integer :: ir, il, ic
+    integer :: ir, il, ic, k
+    integer, allocatable :: lsel(:)
     character(len=:), allocatable :: fmt
     character(len=24) :: ts
     fmt = value_fmt(m%min_digits, ' ')
+    lsel = pack([(il, il=1, m%nlay)], m%min_lay)
     write (ts, '(f0.3)') real(step, dp) * m%step_len
     if (ts(1:1) == '.') ts = '0' // ts
-    do il = 1, m%nlay
-      if (.not. m%min_lay(il)) cycle
-      write (u, '(a,i0,a,a,a,i0,a,i0,a,i0)') '# STEP ', step, ' TIME ', trim(ts), &
-        ' ILAY ', il, ' NROW ', m%nrow, ' NCOL ', m%ncol
+    if (m%min_horizontal) then
+      write (u, '(a,i0,a,a,a,a,a,i0,a,i0)') '# STEP ', step, ' TIME ', trim(ts), ' LAYERS ', layer_list(m%min_lay), &
+        ' NROW ', m%nrow, ' NCOL ', m%ncol
       do ir = 1, m%nrow
-        write (u, fmt) (c(lin(m, il, ir, ic)), ic=1, m%ncol)
+        write (u, fmt) ((c(lin(m, lsel(k), ir, ic)), ic=1, m%ncol), k=1, size(lsel))
       end do
-    end do
+    else
+      do il = 1, m%nlay
+        if (.not. m%min_lay(il)) cycle
+        write (u, '(a,i0,a,a,a,i0,a,i0,a,i0)') '# STEP ', step, ' TIME ', trim(ts), &
+          ' ILAY ', il, ' NROW ', m%nrow, ' NCOL ', m%ncol
+        do ir = 1, m%nrow
+          write (u, fmt) (c(lin(m, il, ir, ic)), ic=1, m%ncol)
+        end do
+      end do
+    end if
   end subroutine write_minutes
 
   subroutine probe_header(m, line)
