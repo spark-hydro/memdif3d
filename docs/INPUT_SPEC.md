@@ -94,7 +94,15 @@ BEGIN options
   PROBES       FILEOUT probes_{period}.csv
   RESTART      FILEOUT restart.dat
   SNAPSHOT     FILEOUT snap_{step}.csv  EVERY 60
+  FIELD_DIGITS 16
 END options
+BEGIN minutes       # optional: every time step in a window, as text
+  FILEOUT minutes_{period}.txt
+  DIGITS  6
+  FROM    0
+  TO      576
+  LAYERS  1-29
+END minutes
 BEGIN probes        # SOURCE, or "ilay irow icol"; written every time step
   SOURCE
   15 22 1
@@ -103,6 +111,8 @@ END probes
 All three outputs are optional. File names are relative to the directory the program is started from. `{period}` in a name is replaced by the period (day) number, zero padded to 3 digits.
 - **DAILY_FIELD:** the whole concentration field at the end of each period, as comma-separated text: a `# ILAY n` line per layer, then one line per `IROW` with the `ICOL` values. Boundary and solid cells are included.
 - **SNAPSHOT:** optional. The same field file as DAILY_FIELD, written every `EVERY` time steps inside the run, with `{step}` in the name replaced by the step number (7 digits, so the files sort in time order). Use it for animations with finer frames: `EVERY 60` is one frame per hour for a 1-minute step. Command line: `--snapshot-every N` (default name `snap_{step}.csv`). Disk use is about 0.75 MB per frame for the Reduced_Matrix grid.
+- **FIELD_DIGITS:** significant digits of the DAILY_FIELD and SNAPSHOT files, 2 to 17 (default 16, which is the full precision of a double).
+- **MINUTES block:** optional; without it no minutes file is written. It writes the field at every time step inside a window, one file per period (`FILEOUT`, default `minutes_{period}.txt`). `DIGITS` (2 to 17, default 6) gives the significant digits. `FROM` and `TO` are minutes of simulated time, both included (defaults: the whole run); the start state (step 0) is written when `FROM` is 0. `LAYERS` is `ALL` (default) or a list such as `1-5,9,12-14`. The file has, for each step and selected layer, a header `# STEP n TIME t ILAY l NROW nr NCOL nc` and then one line per `IROW` with the `ICOL` values separated by blanks. The source concentration is not in this file (use a probe). The file can be large: one step of the whole box is about 0.37 MB with 6 digits and 0.65 MB with 16 digits, so choose a window and layers.
 - **PROBES:** one row per time step with columns `step,time,<probe...>` (time in minutes; a cell column is named `ilay_irow_icol`). With `{period}` in the name a new file starts every period; without it, one file is kept and appended to after a restart.
 - **RESTART:** at the end of every period the full state is written, as text so it can move between computers, alternating between `<name>.1` and `<name>.2` so that a crash during writing never destroys the previous one. On start the newest valid file is used and the run continues with the next period (the log says `restart: continuing after period N`); `--fresh` deletes both files and starts from the initial state. A run whose periods are all finished does nothing.
 

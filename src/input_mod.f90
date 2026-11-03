@@ -42,6 +42,13 @@ module input_mod
     logical :: has_field = .false., has_probes = .false., has_restart = .false., has_snap = .false.
     character(len=256) :: field_out = '', probes_out = '', restart_out = '', snap_out = ''
     integer :: snap_every = 0
+    integer :: field_digits = 16                           ! significant digits of field and snapshot files
+    ! minutes output: every step in a time window, selected layers (MINUTES block of the OC file)
+    logical :: has_min = .false.
+    character(len=256) :: min_out = 'minutes_{period}.txt'
+    integer :: min_digits = 6
+    real(dp) :: min_from = 0.0_dp, min_to = huge(1.0_dp)    ! minutes of simulated time, both included
+    logical, allocatable :: min_lay(:)                      ! (nlay) layers to write
   end type model_t
 
   integer, parameter :: DXYZ(3, 6) = reshape([ 1, 0, 0,  -1, 0, 0,  0, 1, 0,  0, -1, 0,  0, 0, 1,  0, 0, -1], [3, 6])
@@ -315,6 +322,7 @@ contains
     type(model_t), intent(out) :: m
     type(str_t), allocatable :: nam(:), t(:)
     character(len=:), allocatable :: dir, f
+    character(len=64) :: ws
     character(len=:), allocatable :: w
     real(dp), allocatable :: buf(:), advmask(:), fbuf(:), tfac(:)
     integer, allocatable :: tcell(:), tsrc(:)
@@ -595,6 +603,10 @@ contains
       if (found) then
         do i = i0, i1
           w = lower(word(t(i)%s, 1))
+          if (w == 'field_digits') then
+            m%field_digits = to_int(word(t(i)%s, 2), ios)
+            if (ios /= 0 .or. m%field_digits < 2 .or. m%field_digits > 17) call fatal('FIELD_DIGITS must be 2 to 17')
+          end if
           if (lower(word(t(i)%s, 2)) /= 'fileout') cycle
           select case (w)
           case ('daily_field')
@@ -615,6 +627,35 @@ contains
           end select
         end do
       end if
+      call find_block(t, nt, 'minutes', i0, i1, found)
+      if (found) then
+        m%has_min = .true.
+        allocate (m%min_lay(m%nlay))
+        m%min_lay = .true.
+        do i = i0, i1
+          w = lower(word(t(i)%s, 1))
+          select case (w)
+          case ('fileout')
+            m%min_out = word(t(i)%s, 2)
+          case ('digits')
+            m%min_digits = to_int(word(t(i)%s, 2), ios)
+            if (ios /= 0 .or. m%min_digits < 2 .or. m%min_digits > 17) call fatal('MINUTES DIGITS must be 2 to 17')
+          case ('from')
+            ws = word(t(i)%s, 2)
+            read (ws, *, iostat=ios) m%min_from
+            if (ios /= 0) call fatal('MINUTES FROM needs a number (minutes)')
+          case ('to')
+            ws = word(t(i)%s, 2)
+            read (ws, *, iostat=ios) m%min_to
+            if (ios /= 0) call fatal('MINUTES TO needs a number (minutes)')
+          case ('layers')
+            call parse_layers(t(i)%s, m%min_lay)
+          case default
+            call fatal('unknown entry in BEGIN MINUTES: ' // trim(w))
+          end select
+        end do
+        if (m%min_to < m%min_from) call fatal('MINUTES TO is before FROM')
+      end if
       call find_block(t, nt, 'probes', i0, i1, found)
       if (found) then
         m%nprobe = i1 - i0 + 1
@@ -634,5 +675,38 @@ contains
       end if
     end if
   end subroutine read_model
+
+  ! LAYERS ALL | LAYERS 1-5,9,12-14  (1-based layer numbers)
+  subroutine parse_layers(line, sel)
+    character(len=*), intent(in) :: line
+    logical, intent(out) :: sel(:)
+    character(len=len(line)) :: s
+    integer :: k, n, p, a, b, ios, q
+    s = line
+    k = index(lower(s), 'layers') + 6
+    s = adjustl(s(k:))
+    if (lower(trim(s)) == 'all') then
+      sel = .true.
+      return
+    end if
+    sel = .false.
+    do while (len_trim(s) > 0)
+      p = scan(s, ', ')
+      if (p == 0) p = len_trim(s) + 1
+      q = index(s(1:p - 1), '-')
+      if (q > 0) then
+        read (s(1:q - 1), *, iostat=ios) a
+        if (ios == 0) read (s(q + 1:p - 1), *, iostat=ios) b
+      else
+        read (s(1:p - 1), *, iostat=ios) a
+        b = a
+      end if
+      if (ios /= 0) call fatal('bad LAYERS list in the MINUTES block')
+      n = size(sel)
+      if (a < 1 .or. b > n .or. a > b) call fatal('LAYERS outside the grid in the MINUTES block')
+      sel(a:b) = .true.
+      s = adjustl(s(min(p + 1, len(s)):))
+    end do
+  end subroutine parse_layers
 
 end module input_mod

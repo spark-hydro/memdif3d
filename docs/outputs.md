@@ -37,7 +37,17 @@ def read_field(path):
 `tools/animate_field.py` and `tools/animate_3d.py` do this for you.
 
 ## Snapshot files: `snap_0000060.csv`, ...
-The same format as a field file, written every N steps inside a run (`SNAPSHOT FILEOUT snap_{step}.csv EVERY 60` in the OC file, or `--snapshot-every 60`). The step number in the name has seven digits, so the files sort in time order. A snapshot is about 0.75 MB for the Reduced_Matrix grid. Use them for finer animations (`--pattern 'snap_*.csv'`).
+The same format as a field file, written every N steps inside a run (`SNAPSHOT FILEOUT snap_{step}.csv EVERY 60` in the OC file, or `--snapshot-every 60`). The step number in the name has seven digits, so the files sort in time order. A snapshot is about 0.75 MB with the default 16 digits (`FIELD_DIGITS` in the OC file gives fewer) for the Reduced_Matrix grid. Use them for finer animations (`--pattern 'snap_*.csv'`).
+
+## Minutes files: `minutes_001.txt`, ...
+Optional (`BEGIN minutes` in the OC file, see [Input files](INPUT_SPEC.md)). The field at every time step of a window, one file per period, as blank-separated text with 6 significant digits unless `DIGITS` says otherwise. Each selected layer of each step is a tile with its own header, in time order (the same order as the MODFLOW head file records):
+
+```text
+# STEP 17 TIME 17.000 ILAY 3 NROW 43 NCOL 25
+ 0.00000E+000 0.00000E+000 ... (25 values per line, 43 lines)
+```
+
+With `DIGITS 16` the values equal those of a snapshot file of the same step. A start state is written as `STEP 0` when the window starts at 0. One step of the whole box is about 0.37 MB with 6 digits, so a day of 1440 minutes is about 0.54 GB; limit `FROM`, `TO` and `LAYERS` when you do not need everything.
 
 ## Probe files: `probes_001.csv`, ...
 One row per time step with the columns `step,time,SOURCE,<cells...>`; `time` is in minutes. The cells are listed in the `probes` block of the OC file, either `SOURCE` or a cell id `ilay irow icol`, and a cell column is named `ilay_irow_icol`:

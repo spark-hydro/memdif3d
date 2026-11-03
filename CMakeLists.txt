@@ -97,6 +97,11 @@ if(BUILD_TESTING)
       COMMAND ${Python3_EXECUTABLE} -I ${CMAKE_SOURCE_DIR}/tests/test_run.py $<TARGET_FILE:memdif3d>
               ${CMAKE_SOURCE_DIR}/data/reduced_matrix/rm.nam)
     set_tests_properties(run_reduced_matrix PROPERTIES PASS_REGULAR_EXPRESSION "PASS" TIMEOUT 300)
+    # minutes output: equals the snapshot files, digits option, time window and layer selection
+    add_test(NAME minutes_output
+      COMMAND ${Python3_EXECUTABLE} -I ${CMAKE_SOURCE_DIR}/tests/test_minutes.py $<TARGET_FILE:memdif3d>
+              ${CMAKE_SOURCE_DIR}/data/reduced_matrix/rm.nam)
+    set_tests_properties(minutes_output PROPERTIES PASS_REGULAR_EXPRESSION "PASS" TIMEOUT 300)
     # other grids, off-centre source, sorption, advection; sealed box (mass balance, analytic end state); stability guard
     add_test(NAME other_geometries
       COMMAND ${Python3_EXECUTABLE} -I ${CMAKE_SOURCE_DIR}/tests/test_cases.py $<TARGET_FILE:memdif3d>)

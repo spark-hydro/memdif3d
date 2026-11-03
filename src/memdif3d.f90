@@ -6,7 +6,7 @@ program memdif3d
   use banner_mod, only: print_banner, run_stamp
   use input_mod, only: model_t, read_model, lin, fatal
   use solver_mod, only: advance, stability
-  use output_mod, only: expand_name, expand_step, write_field, write_restart, read_restart, remove_restart, probe_header
+  use output_mod, only: expand_name, expand_step, write_field, write_restart, read_restart, remove_restart, probe_header, write_minutes
   implicit none
 
   type(model_t) :: m
@@ -14,9 +14,9 @@ program memdif3d
   character(len=1024) :: line
   real(dp), allocatable :: buf(:, :)
   real(dp) :: cm, cmn, tsec
-  integer :: nargs, i, ip, is, cur, ip0, gstep, step0, pu, ios, c0, c1, rate, ovr_np, ovr_spp, ovr_snap
-  logical :: fresh, per_period, pok, force
-  real(dp) :: smax, ssrc
+  integer :: mu, nargs, i, ip, is, cur, ip0, gstep, step0, pu, ios, c0, c1, rate, ovr_np, ovr_spp, ovr_snap
+  logical :: fresh, per_period, pok, mok, force
+  real(dp) :: smax, ssrc, tlo, thi, tnow
   integer :: worst, wc, wr, wl
   character(len=:), allocatable :: pfile
 
@@ -154,6 +154,19 @@ program memdif3d
       if (.not. pok) print '(a)', 'warning: cannot open ' // pfile
     end if
 
+    mok = .false.
+    if (m%has_min) then
+      tlo = real((ip - 1) * m%steps_per_period, dp) * m%step_len
+      thi = real(ip * m%steps_per_period, dp) * m%step_len
+      if (thi >= m%min_from .and. tlo <= m%min_to) then
+        open (newunit=mu, file=expand_name(m%min_out, ip), status='replace', action='write', iostat=ios)
+        mok = (ios == 0)
+        if (.not. mok) print '(a)', 'warning: cannot open ' // expand_name(m%min_out, ip)
+        ! the start state belongs to the first period of a run from step 0
+        if (mok .and. ip == 1 .and. m%min_from <= 0.0_dp) call write_minutes(m, buf(:, cur), mu, 0)
+      end if
+    end if
+
     do is = 1, m%steps_per_period
       call advance(m, buf(:, cur), cm, buf(:, 3 - cur), cmn)
       cm = cmn
@@ -163,12 +176,17 @@ program memdif3d
         if (mod(gstep, m%snap_every) == 0) &
           call write_field(m, buf(:, cur), cm, ip, gstep, expand_step(m%snap_out, gstep))
       end if
+      if (mok) then
+        tnow = real(gstep, dp) * m%step_len
+        if (tnow >= m%min_from .and. tnow <= m%min_to) call write_minutes(m, buf(:, cur), mu, gstep)
+      end if
       if (pok) then
         write (pu, '(i0,",",f0.3,*(:,",",es23.15e3))') gstep, real(gstep, dp) * m%step_len, &
           (probe_value(m, buf(:, cur), cm, i), i=1, m%nprobe)
       end if
     end do
     if (pok) close (pu)
+    if (mok) close (mu)
 
     gstep = ip * m%steps_per_period
     if (m%has_field) call write_field(m, buf(:, cur), cm, ip, gstep, expand_name(m%field_out, ip))

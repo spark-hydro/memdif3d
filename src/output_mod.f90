@@ -4,9 +4,19 @@ module output_mod
   use input_mod, only: model_t, lin
   implicit none
   private
-  public :: expand_name, expand_step, write_field, write_restart, read_restart, remove_restart, probe_header
+  public :: expand_name, expand_step, write_field, write_minutes, write_restart, read_restart, remove_restart, probe_header
 
 contains
+
+  ! (*(es<w>.<d>e3,:,"<sep>")) for the given number of significant digits
+  function value_fmt(digits, sep) result(f)
+    integer, intent(in) :: digits
+    character(len=1), intent(in) :: sep
+    character(len=:), allocatable :: f
+    character(len=64) :: b
+    write (b, '(a,i0,a,i0,a,a,a)') '(*(es', digits + 7, '.', digits - 1, 'e3,:,"', sep, '"))'
+    f = trim(b)
+  end function value_fmt
 
   ! replaces {period} by the period number (3 digits, zero padded)
   function expand_name(tmpl, period) result(r)
@@ -55,6 +65,8 @@ contains
     integer, intent(in) :: period, step
     character(len=*), intent(in) :: path
     integer :: u, ios, ir, il, ic
+    character(len=:), allocatable :: fmt
+    fmt = value_fmt(m%field_digits, ',')
     open (newunit=u, file=path, status='replace', action='write', iostat=ios)
     if (ios /= 0) then
       write (*, '(a)') 'memdif3d: warning: cannot write ' // trim(path)
@@ -65,11 +77,32 @@ contains
     do il = 1, m%nlay
       write (u, '(a,i0)') '# ILAY ', il
       do ir = 1, m%nrow
-        write (u, '(*(es23.15e3,:,","))') (c(lin(m, il, ir, ic)), ic=1, m%ncol)
+        write (u, fmt) (c(lin(m, il, ir, ic)), ic=1, m%ncol)
       end do
     end do
     close (u)
   end subroutine write_field
+
+  ! one step of the minutes file: a header line per selected layer, then its rows (values separated by blanks)
+  subroutine write_minutes(m, c, u, step)
+    type(model_t), intent(in) :: m
+    real(dp), intent(in) :: c(:)
+    integer, intent(in) :: u, step
+    integer :: ir, il, ic
+    character(len=:), allocatable :: fmt
+    character(len=24) :: ts
+    fmt = value_fmt(m%min_digits, ' ')
+    write (ts, '(f0.3)') real(step, dp) * m%step_len
+    if (ts(1:1) == '.') ts = '0' // ts
+    do il = 1, m%nlay
+      if (.not. m%min_lay(il)) cycle
+      write (u, '(a,i0,a,a,a,i0,a,i0,a,i0)') '# STEP ', step, ' TIME ', trim(ts), &
+        ' ILAY ', il, ' NROW ', m%nrow, ' NCOL ', m%ncol
+      do ir = 1, m%nrow
+        write (u, fmt) (c(lin(m, il, ir, ic)), ic=1, m%ncol)
+      end do
+    end do
+  end subroutine write_minutes
 
   subroutine probe_header(m, line)
     type(model_t), intent(in) :: m
