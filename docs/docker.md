@@ -24,11 +24,13 @@ docker build -t memdif3d:slim --target slim --build-arg VERSION=$(git describe -
 ```
 
 ## Short commands: the `memdif` helper
-Two small scripts in the image, `memdif.sh` (Linux and macOS) and `memdif.cmd` (Windows), replace the long `docker run` lines by commands such as `memdif run`, `memdif view` and `memdif gif`. They link your model folder and the current folder for you. Copy one out of the image and read the help:
+Two small scripts in the image, `memdif.sh` (Linux and macOS) and `memdif.cmd` (Windows), replace the long `docker run` lines by commands such as `memdif run`, `memdif view` and `memdif gif`. You give the path of your model once (`-m`), and the script links that folder and the current folder for you. Copy one out of the image into a folder on your `PATH`, then work in any folder where the results should go:
 
 ```bash
-docker run --rm -v "$PWD":/work ghcr.io/spark-hydro/memdif3d cp /opt/memdif3d/scripts/memdif.sh /work/
-./memdif.sh help
+mkdir -p ~/bin
+docker run --rm --user "$(id -u):$(id -g)" -v ~/bin:/work ghcr.io/spark-hydro/memdif3d cp /opt/memdif3d/scripts/memdif.sh /work/memdif
+memdif help
+memdif -m ~/projects/my_model run
 ```
 
 The step-by-step guide for Windows, [Docker on Windows](docker-windows.md), uses it throughout. The long form of every command is shown below.

@@ -6,8 +6,8 @@ What you do, in order:
 
 1. install Docker Desktop
 2. get the memdif3d image
-3. make folders and get the helper
-4. set up the model (the input files)
+3. install the helper (once)
+4. give the path of your model and set it up
 5. run it
 6. look at the results (an interactive viewer, 3D pages and GIFs)
 
@@ -58,64 +58,73 @@ Check it:
 docker run --rm ghcr.io/spark-hydro/memdif3d --version
 ```
 
-You should see the banner with the version number. The image holds the program, the example model and all plotting tools. To update later, run the `pull` command again (or `..\memdif.cmd update` after step 3).
+You should see the banner with the version number. The image holds the program, the example model and all plotting tools. To update later, run the `pull` command again (or `memdif update` after step 3).
 
-## 3. Make folders and get the helper
+## 3. Install the helper
 
-Make one folder that holds everything, with one folder for the model (input files) and one for each run (output files). The program writes its output into the folder where it is started, so a folder per run keeps the results apart:
-
-```text
-C:\Users\<your name>\memdif3d\        (in PowerShell: $HOME\memdif3d)
-    memdif.cmd    the helper with the short commands
-    mymodel\      the input files of your model (rm.nam, rm.dis, ...)
-    run1\         the output of the first run
-    run2\         the output of the next run
-```
-
-`$HOME` is your user folder, `C:\Users\<your name>` (type `echo $HOME` to see it). A folder there is your own, is not synced by OneDrive and does not clutter the drive root. In PowerShell:
+The helper `memdif.cmd` is a small file inside the image. You install it once, in a folder of its own, and then the command `memdif` works in every folder. In PowerShell:
 
 ```powershell
-mkdir $HOME\memdif3d\run1
+mkdir $HOME\memdif3d
 ```
 
 ```powershell
-cd $HOME\memdif3d
+docker run --rm -v "$HOME\memdif3d:/work" ghcr.io/spark-hydro/memdif3d cp /opt/memdif3d/scripts/memdif.cmd /work/
 ```
 
-The helper is inside the image. Copy it into your `memdif3d` folder:
+`$HOME` is your user folder, `C:\Users\<your name>`. The second command copies `memdif.cmd` from the image into the new folder `memdif3d`. Docker Desktop may ask to share the folder the first time: allow it. Now add that folder to your `PATH` (once), so that Windows finds `memdif` wherever you are:
 
 ```powershell
-docker run --rm -v "${PWD}:/work" ghcr.io/spark-hydro/memdif3d cp /opt/memdif3d/scripts/memdif.cmd /work/
+[Environment]::SetEnvironmentVariable("Path", [Environment]::GetEnvironmentVariable("Path", "User") + ";$HOME\memdif3d", "User")
 ```
 
-Docker Desktop may ask to share the folder the first time: allow it. The part `-v "${PWD}:/work"` links the folder you are in (`${PWD}`) into the container as `/work`, so a file the container writes there is a normal Windows file. In the older `cmd` window write `%cd%` instead of `${PWD}`.
-
-From now on you work in a run folder and call the helper one level up. Try it:
+**Close PowerShell and open a new one** (the change is seen by new windows only). Test:
 
 ```powershell
-cd $HOME\memdif3d\run1
+memdif help
 ```
 
-```powershell
-..\memdif.cmd help
-```
+It lists the commands: `run`, `view`, `domain`, `anim3d`, `gif`, `tool`, `newmodel`, `update` and `version`. Every command prints the long Docker command it runs, so you can see what happens (section *Under the hood*). If Windows does not find `memdif`, call it by its whole path, `& $HOME\memdif3d\memdif.cmd help`, and check section *When something goes wrong*.
 
-It lists the commands: `run`, `view`, `domain`, `anim3d`, `gif`, `tool`, `newmodel`, `update` and `version`. Every command prints the long Docker command it runs, so you can see what happens (section *Under the hood*).
+That is all the setup. Your models and results stay wherever you like; there is no fixed folder layout.
 
 ## 4. Set up the model
 
-### 4.1 Start from the example
+### 4.1 Give the path of your model
+
+The model is a folder with the input files (`rm.nam`, `rm.dis`, ...); see [Input files](INPUT_SPEC.md). It can be anywhere. Tell `memdif` where it is, either with `-m` in front of the command:
 
 ```powershell
-..\memdif.cmd newmodel
+memdif -m D:\projects\my_model domain
 ```
 
-This copies the example model (the Reduced_Matrix case) from the image to `$HOME\memdif3d\mymodel`. `dir $HOME\memdif3d\mymodel` lists ten files: `rm.nam`, `rm.tdis`, `rm.dis`, `rm.ic`, `rm.dsp`, `rm.mst`, `rm.src`, `rm.adv`, `rm.bnd` and `rm.oc`.
+or once for the PowerShell window, so that the commands below stay short:
+
+```powershell
+$env:MEMDIF_MODEL = "D:\projects\my_model"
+```
+
+The path may be the model folder or the path of the main name file, `D:\projects\my_model\case2.nam`. Give the file when the folder holds several `.nam` files; with a folder `memdif` takes the only `.nam` file in it. Always give the **whole model folder** (or a name file inside it): the name file lists the other input files relative to its own folder, so they must be next to it. The model is only read, never changed.
+
+To keep the setting for every new window, store it once: `setx MEMDIF_MODEL "D:\projects\my_model"` (it is valid from the next window on).
+
+The **results** go into the folder you are in when you give the command. Use a folder of its own for each run, for example next to the model:
+
+```powershell
+mkdir D:\projects\my_model_runs\run1
+```
+
+```powershell
+cd D:\projects\my_model_runs\run1
+```
+
+!!! tip "No model yet?"
+    `memdif newmodel` copies the example model (the Reduced_Matrix case) to a folder `mymodel` in the folder you are in, and `memdif newmodel name` uses the name you give. Use that folder as a starting point for your own model.
 
 ### 4.2 Check the model before you run it
 
 ```powershell
-..\memdif.cmd domain
+memdif domain
 ```
 
 writes `domain.html` into the run folder. Double-click it: it shows the 3D box, the source, the membrane faces and the start state (see section 6 for how to use the page). This is the quickest way to see that a change in the input files did what you meant.
@@ -137,14 +146,10 @@ Every file is described in [Input files](INPUT_SPEC.md), and [Build your own mod
 A membrane with holes can be made by a script. This copies the model and punches holes into the copy `holes`, which appears in the run folder:
 
 ```powershell
-..\memdif.cmd tool make_holes.py /model /work/holes --pitch 3 --size 2 --closed
+memdif tool make_holes.py /model /work/holes --pitch 3 --size 2 --closed
 ```
 
-Move the folder `holes` to `$HOME\memdif3d\holes`. To run the copy instead of `mymodel`, give its folder once for the PowerShell window:
-
-```powershell
-$env:MEMDIF_MODEL = "$HOME\memdif3d\holes"
-```
+Move the folder `holes` to where you keep your models and point `MEMDIF_MODEL` at it (section 4.1).
 
 ### 4.4 Write every minute of a time window (optional)
 
@@ -161,33 +166,12 @@ END MINUTES
 
 This gives `day_001.csv` with the first two hours. A whole day of the whole box is about 640 MB, so choose a window. The format is described in [Output files](outputs.md).
 
-### 4.5 Use a model that is somewhere else
-
-The model does not have to be in `mymodel`. Point the helper at any folder, and name the main name file if the folder holds several `.nam` files. For one PowerShell window:
-
-```powershell
-$env:MEMDIF_MODEL = "D:\projects\my_other_model"
-$env:MEMDIF_NAM = "case2.nam"
-```
-
-Then `..\memdif.cmd run` runs `case2.nam` from that folder. Without `MEMDIF_NAM` the helper takes the only `.nam` file of the folder (or the first one). Give the **whole model folder**, not only the name file: the name file lists the other input files relative to its own folder, so they must be next to it. The results still go to the run folder you are in.
-
-Without the helper the same thing is one `docker run`, with the folder linked as `/model` and the path of the name file inside the container:
-
-```powershell
-docker run --rm -v "${PWD}:/work" -v "D:\projects\my_other_model:/model:ro" ghcr.io/spark-hydro/memdif3d /model/case2.nam
-```
-
 ## 5. Run the model
 
-Go to the run folder and run:
+Go to the run folder (section 4.1) and run:
 
 ```powershell
-cd $HOME\memdif3d\run1
-```
-
-```powershell
-..\memdif.cmd run
+memdif run
 ```
 
 The screen shows the banner, the model size, the stability check and one line for every finished day, ending with *Normal termination*. The 28 days of the example take a few seconds. The run folder now holds the results: a `field_NNN.csv` and a `probes_NNN.csv` for every day and the restart files `restart.dat.1` and `restart.dat.2`.
@@ -201,7 +185,7 @@ Options of the program go after `run`:
 | `--fresh` | start again from the initial state and ignore the restart files |
 | `--snapshot-every 60` | also write the whole box every 60 steps (one `snap_*.csv` file each) |
 
-For example `..\memdif.cmd run --nperiods 2 --fresh`. If a run is interrupted, give the same command again in the same run folder: it continues after the last finished day. To start over, add `--fresh`, or use a new run folder.
+For example `memdif run --nperiods 2 --fresh`. If a run is interrupted, give the same command again in the same run folder: it continues after the last finished day. To start over, add `--fresh`, or use a new run folder.
 
 ## 6. Look at the results
 
@@ -210,7 +194,7 @@ Start the tools from the run folder. Each command writes one file into it; open 
 ### Interactive viewer: the domain, and any layer, row or column
 
 ```powershell
-..\memdif.cmd view
+memdif view
 ```
 
 Double-click `viewer.html`. The 3D model is on the left and the concentration on a plane of your choice on the right. In the bar on top choose **Plane**: *Layer* (the top view, rows × columns), *Row* (a section, layers × columns) or *Column* (a plane at one distance from the membrane, rows × layers), then the **number** of the layer, row or column with the slider. The chosen plane is drawn inside the 3D box. Use the **Time** slider or **Play** to animate the plane. Nothing runs again when you change the plane; the page holds the data. The frames are the day files of the run (`field_001.csv`, `field_002.csv`, ...). Under the 3D box you find the **probes**: the concentration of the source and of the probe cells against time, a line for each probe with a dot at every frame and a dotted line at the time shown. The **Probes** menu in the bar picks one probe or all, and the **Scale** menu switches between logarithmic and linear. The probe cells are marked in the 3D box and on the plane picture, with their names, in the colour of their line. The probes come from the `probes_NNN.csv` files in the run folder, which every run writes.
@@ -218,13 +202,13 @@ Double-click `viewer.html`. The 3D model is on the left and the concentration on
 For finer time steps use the minutes output (section 4.4) and choose a window. The page grows with the number of frames:
 
 ```powershell
-..\memdif.cmd view --pattern "day_*.csv" --every 5 --from 0 --to 120 --out first2h.html
+memdif view --pattern "day_*.csv" --every 5 --from 0 --to 120 --out first2h.html
 ```
 
 ### 3D animation in the browser
 
 ```powershell
-..\memdif.cmd anim3d
+memdif anim3d
 ```
 
 writes `solute3d.html`: drag to rotate while the animation plays, scroll to zoom. It uses a logarithmic colour scale, so the small concentrations far from the membrane stay visible. To show only part of the box, add `--ilay 15` (one layer through the middle of the source), `--icol 3` (the plane 3 mm from the membrane) or a range such as `--ilay 15-29`.
@@ -232,7 +216,7 @@ writes `solute3d.html`: drag to rotate while the animation plays, scroll to zoom
 ### GIF with a top view and a column plane
 
 ```powershell
-..\memdif.cmd gif --ilay 15 --icol 3
+memdif gif --ilay 15 --icol 3
 ```
 
 writes `views.gif`: `--ilay 15` is the top view of layer 15 (rows × columns), `--icol 3` the plane 3 mm from the membrane (rows × layers), and `--irow 22` would give the section through row 22. Open it in the browser or a picture viewer.
@@ -252,13 +236,13 @@ Keep `probes_NNN.csv` next to the day files: the concentration of the source is 
 
 ## Under the hood
 
-Each `memdif` command is one `docker run`. It links two folders into the container: the model folder, read-only, as `/model`, and the run folder as `/work`, where the output goes. For instance `..\memdif.cmd run --nperiods 2` is the same as
+Each `memdif` command is one `docker run`. It links two folders into the container: the model folder, read-only, as `/model`, and the run folder as `/work`, where the output goes. For instance `memdif run --nperiods 2` is the same as
 
 ```powershell
-docker run --rm -v "${PWD}:/work" -v "${HOME}\memdif3d\mymodel:/model:ro" ghcr.io/spark-hydro/memdif3d /model/rm.nam --nperiods 2
+docker run --rm -v "${PWD}:/work" -v "D:\projects\my_model:/model:ro" ghcr.io/spark-hydro/memdif3d /model/rm.nam --nperiods 2
 ```
 
-The helper prints that line for every command. `..\memdif.cmd tool script.py ...` runs any tool of the image the same way; the scripts are listed in [Tools](tools.md). Set `MEMDIF_MODEL` to use another model folder and `MEMDIF_IMAGE` to use another image. The image, the model and the results stay apart: the image never changes, and all your files are ordinary Windows folders.
+The helper prints that line for every command. `memdif tool script.py ...` runs any tool of the image the same way; the scripts are listed in [Tools](tools.md). `-m` (or `MEMDIF_MODEL`) sets the model folder and `MEMDIF_IMAGE` another image. The image, the model and the results stay apart: the image never changes, and all your files are ordinary Windows folders.
 
 ## When something goes wrong
 
@@ -266,9 +250,10 @@ The helper prints that line for every command. `..\memdif.cmd tool script.py ...
 |---|---|
 | `error during connect` or `cannot connect to the Docker daemon` | Docker Desktop is not running. Start it and wait for *Engine running*. |
 | `no matching manifest for windows/amd64` | Docker Desktop is in Windows containers mode. Check with `docker info --format "{{.OSType}}"`; if it says `windows`, right-click the whale icon and choose *Switch to Linux containers*. |
-| `'..\memdif.cmd' is not recognized` | Check the folder you are in (`pwd`) and that `memdif.cmd` is in your `memdif3d` folder (step 3). |
-| `memdif: no .nam file in ...` | The model folder is empty or elsewhere: run `..\memdif.cmd newmodel`, or set `MEMDIF_MODEL`. |
-| `[memdif3d] cannot find the model file` | The model folder has no `.nam` file of that name; check `dir $HOME\memdif3d\mymodel`. |
+| `'memdif' is not recognized` | Open a **new** PowerShell window after the `PATH` command of step 3, and check that `memdif.cmd` is in `$HOME\memdif3d` (`dir $HOME\memdif3d`). Until then call it as `& $HOME\memdif3d\memdif.cmd`. |
+| `memdif: no model given` | Give the path of the model: `memdif -m D:\projects\my_model run`, or `$env:MEMDIF_MODEL = "..."` (section 4.1). |
+| `memdif: no .nam file in ...` | The folder you gave holds no `.nam` file: check the path, or give the path of the `.nam` file itself. |
+| `[memdif3d] cannot find the model file` | The model folder has no `.nam` file of that name; check the model folder with `dir`, or give the `.nam` file with `-m`. |
 | the output folder is empty | Output goes to the folder you start the command in. Start it in the run folder. |
 | `${PWD}` is not understood | You are in the old `cmd` window. Use PowerShell, or write `%cd%` instead of `${PWD}`. |
 | a path with spaces fails | Keep the quotes around the `-v` arguments, as in the commands of this page: `-v "${PWD}:/work"`. The helper `memdif.cmd` already does this. |
@@ -279,9 +264,9 @@ The helper prints that line for every command. `..\memdif.cmd tool script.py ...
 ## Updating and cleaning up
 
 ```powershell
-..\memdif.cmd update
+memdif update
 ```
 
-fetches the newest image. To get the newest helper too, copy it again with the command of step 3. `docker images` lists the images on your computer and `docker image rm ghcr.io/spark-hydro/memdif3d:latest` deletes one. Your model and result folders are ordinary Windows folders and are not touched.
+fetches the newest image. To get the newest helper too, copy it again with the `docker run ... cp` command of step 3. `docker images` lists the images on your computer and `docker image rm ghcr.io/spark-hydro/memdif3d:latest` deletes one. Your model and result folders are ordinary Windows folders and are not touched.
 
-On Linux or macOS use `memdif.sh` (in `/opt/memdif3d/scripts` of the image) the same way: `../memdif.sh run`.
+On Linux or macOS use `memdif.sh` (in `/opt/memdif3d/scripts` of the image) the same way: copy it to a folder on your `PATH` as `memdif` (for example `~/bin/memdif`) and run `memdif -m ~/projects/my_model run`.
