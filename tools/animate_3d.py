@@ -170,15 +170,18 @@ def main():
     pause = dict(label='Pause', method='animate',
                  args=[[None], dict(mode='immediate', frame=dict(duration=0, redraw=False), transition=dict(duration=0))])
     zr = [zs[0] + 0.5, zs[-1] + 1.5]
-    span = (zr[1] - zr[0] + 1, xs[-1] - xs[0] + 1, ys[-1] - ys[0] + 1)
+    # axes to scale (ICOL, IROW, ILAY), but no axis shorter than 30 % of the longest, so that a thin box (one plane,
+    # --icol 3) keeps room for its tick labels and axis title
+    span = (zs[-1] + 3.0, xs[-1] - xs[0] + 1.0, ys[-1] - ys[0] + 1.0)
+    ratio = [1.2 * max(v / max(span), 0.3) for v in span]
     fig = go.Figure(data=traces, frames=plot_frames)
     fig.update_layout(
         title=f"memdif3d: {m.nx} x {m.ny} x {m.nz} cells, {len(m.faces)} source faces"
               + (f", {len(m.hset)} holes" if m.hset else ''),
         coloraxis=dict(colorscale=a.cmap, cmin=lo, cmax=hi, colorbar=cbar),
-        scene=dict(xaxis=dict(title='distance from membrane, ICOL (mm)', range=[-1.5, zs[-1] + 1.5]),
+        scene=dict(xaxis=dict(title='distance from membrane, ICOL (mm)', range=[-1.5, zs[-1] + 1.5], nticks=6),
                    yaxis=dict(title='IROW (mm)', autorange='reversed'), zaxis=dict(title='ILAY (mm)', autorange='reversed'),
-                   aspectmode='data', camera=dict(eye=dict(x=1.7, y=-1.7, z=1.0))),
+                   aspectmode='manual', aspectratio=dict(x=ratio[0], y=ratio[1], z=ratio[2]), camera=dict(eye=dict(x=1.7, y=-1.7, z=1.0))),
         updatemenus=[dict(type='buttons', direction='left', x=0.02, y=0.0, xanchor='left', yanchor='top', pad=dict(t=60),
                           buttons=[play, pause])],
         sliders=[dict(active=0, x=0.18, len=0.8, y=0.0, yanchor='top', pad=dict(t=50),
