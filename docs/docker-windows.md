@@ -58,7 +58,7 @@ Check it:
 docker run --rm ghcr.io/spark-hydro/memdif3d --version
 ```
 
-You should see the banner with the version number. The image holds the program, the example model and all plotting tools. To update later, run the `pull` command again (or `memdif update` after step 3).
+You should see the banner with the version number. The image holds the program, the example model and all plotting tools. To update later, run the `pull` command again (or `memdif update` after step 3, which also refreshes the helper).
 
 ## 3. Install the helper
 
@@ -267,6 +267,6 @@ The helper prints that line for every command. `memdif tool script.py ...` runs 
 memdif update
 ```
 
-fetches the newest image. To get the newest helper too, copy it again with the `docker run ... cp` command of step 3. `docker images` lists the images on your computer and `docker image rm ghcr.io/spark-hydro/memdif3d:latest` deletes one. Your model and result folders are ordinary Windows folders and are not touched.
+fetches the newest image and then replaces `memdif.cmd` in `$HOME\memdif3d` by the helper of that image, so one command updates both. (If a helper from before 0.4.5 is installed, `memdif update` only pulls the image; copy the helper once with the `docker run ... cp` command of step 3, and later `memdif update` does both.) `docker images` lists the images on your computer and `docker image rm ghcr.io/spark-hydro/memdif3d:latest` deletes one. Your model and result folders are ordinary Windows folders and are not touched.
 
 On Linux or macOS use `memdif.sh` (in `/opt/memdif3d/scripts` of the image) the same way: copy it to a folder on your `PATH` as `memdif` (for example `~/bin/memdif`) and run `memdif -m ~/projects/my_model run`.

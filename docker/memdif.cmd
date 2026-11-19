@@ -8,6 +8,8 @@ rem set MEMDIF_MODEL once per window. The model is linked read-only as /model, t
 rem MEMDIF_NAM chooses the name file when a model folder holds several .nam files, MEMDIF_IMAGE uses another image.
 rem Every command prints the long docker command it runs. Works in PowerShell and in cmd.
 setlocal EnableExtensions
+set "SELF=%~f0"
+set "HERE=%~dp0"
 if "%MEMDIF_IMAGE%"=="" (set "IMG=ghcr.io/spark-hydro/memdif3d:latest") else (set "IMG=%MEMDIF_IMAGE%")
 :opts
 if /i "%~1"=="-m" goto setmodel
@@ -92,8 +94,13 @@ exit /b %errorlevel%
 call :dock --version
 exit /b %errorlevel%
 :update
+rem memdif update: pull the newest image, then replace this helper file by the one inside the image.
+rem The copy and the exit are on ONE line: cmd reads a whole line before it runs it, so it never reads on in the new file.
 docker pull %IMG%
-exit /b %errorlevel%
+if errorlevel 1 exit /b 1
+docker run --rm -v "%HERE%.":/work %IMG% cp /opt/memdif3d/scripts/memdif.cmd /work/memdif.cmd.new
+if errorlevel 1 (echo memdif: image updated, but the helper could not be refreshed & exit /b 1)
+copy /y "%HERE%memdif.cmd.new" "%SELF%" >nul & del "%HERE%memdif.cmd.new" & echo memdif: image and helper are up to date & exit /b 0
 :newmodel
 rem memdif newmodel [name]: copy the example model to the folder [name] (default mymodel) in the current folder
 set "NEWNAME=%~1"
@@ -135,7 +142,7 @@ echo   anim3d [options]    3D animation: solute3d.html
 echo   gif [options]       GIF with a top view and a column plane: views.gif
 echo   tool script.py ...  any tool of the image, for example: tool make_holes.py /model /work/holes --pitch 3 --size 2
 echo   newmodel [name]     copy the example model to a new folder (default mymodel) in the current folder
-echo   update              download the newest image
+echo   update              download the newest image and refresh this helper file
 echo   version             show the version of the program
 echo.
 echo The options after the command are those of the program or tool (see the manual), for example:

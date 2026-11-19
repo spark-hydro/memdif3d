@@ -33,7 +33,7 @@ memdif [-m MODEL] <command> [options]    run it in the folder where the results 
   gif [options]       GIF with a top view and a column plane: views.gif
   tool script.py ...  any tool of the image, for example: tool make_holes.py /model /work/holes --pitch 3 --size 2
   newmodel [name]     copy the example model to a new folder (default mymodel) in the current folder
-  update              download the newest image
+  update              download the newest image and refresh this script
   version             show the version of the program
 
 The options after the command are those of the program or tool (see the manual, pages Tools and Input files),
@@ -79,7 +79,18 @@ case "$cmd" in
     if [ -e "$PWD/$name" ]; then echo "memdif: $PWD/$name exists already" >&2; exit 2; fi
     docker run --rm --user "$(id -u):$(id -g)" -v "$PWD":/work "$IMG" cp -r /opt/memdif3d/data/reduced_matrix "/work/$name"
     echo "model copied to $PWD/$name" ;;
-  update)  docker pull "$IMG" ;;
+  update)
+    docker pull "$IMG" || exit 1
+    # replace this script by the one in the image (mv swaps the file, a running sh keeps reading the old one)
+    self="$(command -v "$0" 2>/dev/null || echo "$0")"
+    tmp="$self.new"
+    if [ -w "$(dirname "$self")" ] && cid=$(docker create "$IMG") &&
+       docker cp "$cid:/opt/memdif3d/scripts/memdif.sh" "$tmp" >/dev/null; then
+      docker rm "$cid" >/dev/null
+      chmod +x "$tmp" && mv "$tmp" "$self" && echo "memdif: image and helper are up to date"
+    else
+      echo "memdif: image updated, but the helper could not be refreshed" >&2
+    fi ;;
   version) dock --version ;;
   *) echo "memdif: unknown command '$cmd'" >&2; usage >&2; exit 2 ;;
 esac
