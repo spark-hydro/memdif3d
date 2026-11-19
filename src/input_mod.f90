@@ -42,6 +42,7 @@ module input_mod
     logical :: has_field = .false., has_probes = .false., has_restart = .false., has_snap = .false.
     character(len=256) :: field_out = '', probes_out = '', restart_out = '', snap_out = ''
     integer :: snap_every = 0
+    integer :: probes_every = 1                          ! a probe row every n steps
     integer :: field_digits = 16                           ! significant digits of field and snapshot files
     ! minutes output: every step in a time window, selected layers (MINUTES block of the OC file)
     logical :: has_min = .false.
@@ -618,6 +619,11 @@ contains
           case ('probes')
             m%has_probes = .true.
             m%probes_out = word(t(i)%s, 3)
+            if (len_trim(word(t(i)%s, 4)) > 0) then
+              if (lower(word(t(i)%s, 4)) /= 'every') call fatal('PROBES needs: PROBES FILEOUT name [EVERY n]')
+              m%probes_every = to_int(word(t(i)%s, 5), ios)
+              if (ios /= 0 .or. m%probes_every < 1) call fatal('PROBES EVERY needs a positive integer')
+            end if
           case ('restart')
             m%has_restart = .true.
             m%restart_out = word(t(i)%s, 3)

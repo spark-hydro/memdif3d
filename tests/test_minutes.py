@@ -9,6 +9,7 @@ The model is copied to a temporary folder and a MINUTES block is added. Then:
 3. FROM/TO/LAYERS: only the steps in the window and only the chosen layers are written, split over the periods;
    LAYOUT VERTICAL holds the same numbers as the default HORIZONTAL layout.
 4. FIELD_DIGITS 6 in the options block: the field file has 6 significant digits and agrees with the 16-digit one.
+5. PROBES ... EVERY 2: the probe file holds every 2nd step only, with the values of the every-step file.
 """
 import glob
 import os
@@ -181,4 +182,19 @@ with tempfile.TemporaryDirectory() as t1, tempfile.TemporaryDirectory() as t2, t
             if abs(a - b) > 5e-6 * abs(b):
                 fail('6-digit field differs from the 16-digit field')
     print('FIELD_DIGITS ok')
+
+    # ---- 5 (SPP = 5 steps per period, so every 2nd step gives steps 2 and 4 of each period)
+    n5 = model_copy(t5, '')
+    oc = os.path.join(t5, [f for f in os.listdir(t5) if f.endswith('.oc')][0])
+    txt = open(oc).read()
+    txt = re.sub(r'(?im)^(\s*PROBES\s+FILEOUT\s+\S+)', r'\1 EVERY 2', txt, count=1)
+    if 'EVERY 2' not in txt:
+        fail('the model has no PROBES option to extend')
+    open(oc, 'w').write(txt)
+    run(t5, n5, '--nperiods', '2')
+    every = [l.split(',') for l in open(os.path.join(t5, 'probes_001.csv')).read().splitlines()[1:]]
+    allr = [l.split(',') for l in open(os.path.join(t1, 'probes_001.csv')).read().splitlines()[1:]]
+    if [r[0] for r in every] != ['2', '4'] or every != [r for r in allr if int(r[0]) % 2 == 0]:
+        fail('PROBES EVERY 2 does not keep every 2nd row of the full probe file')
+    print('PROBES EVERY ok')
 print('PASS')

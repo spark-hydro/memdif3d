@@ -180,7 +180,7 @@ program memdif3d
         tnow = real(gstep, dp) * m%step_len
         if (tnow >= m%min_from .and. tnow <= m%min_to) call write_minutes(m, buf(:, cur), mu, gstep)
       end if
-      if (pok) then
+      if (pok .and. mod(gstep, m%probes_every) == 0) then
         write (pu, '(i0,",",f0.3,*(:,",",es23.15e3))') gstep, real(gstep, dp) * m%step_len, &
           (probe_value(m, buf(:, cur), cm, i), i=1, m%nprobe)
       end if

@@ -55,7 +55,7 @@ The second line is a comment that names the layer over the first value of each l
 With `DIGITS 16` the values equal those of a snapshot file of the same step. A start state is written as `STEP 0` when the window starts at 0. One step of the whole box is about 0.37 MB with 6 digits, so a day of 1440 minutes is about 0.54 GB; limit `FROM`, `TO` and `LAYERS` when you do not need everything.
 
 ## Probe files: `probes_001.csv`, ...
-One row per time step with the columns `step,time,SOURCE,<cells...>`; `time` is in minutes. The cells are listed in the `probes` block of the OC file, either `SOURCE` or a cell id `ilay irow icol`, and a cell column is named `ilay_irow_icol`:
+One row per time step (every n-th step with `PROBES FILEOUT name EVERY n` in the options block, for example `EVERY 60` for one row an hour) with the columns `step,time,SOURCE,<cells...>`; `time` is in minutes. The cells are listed in the `probes` block of the OC file, either `SOURCE` or a cell id `ilay irow icol`, and a cell column is named `ilay_irow_icol`:
 
 ```text
 step,time,SOURCE,15_22_1,15_22_6
